@@ -19,7 +19,7 @@ import {
 } from './utils/formatters';
 import { separateNameAndPosition } from './utils/nameParser';
 import { loadPersistedState, savePersistedState } from './utils/persistence';
-import { downloadStatusReportHtml } from './utils/htmlReport';
+import { downloadStatusReportHtml, printStatusReportAsPdf } from './utils/htmlReport';
 
 import { Navbar } from './components/Navbar';
 import { BudgetDashboardView } from './components/BudgetDashboardView';
@@ -515,9 +515,18 @@ export default function App() {
     exportToCSV(`회원별_포인트_예산_실적_${new Date().toISOString().slice(0, 10)}.csv`, customerExportData);
   };
 
-  // Export a self-contained HTML status report (조직별 현황 + 최근 실적) for sharing with management
+  // Export a self-contained HTML status report (조직별 현황 + 회원별 현황) for sharing with management
   const handleExportHtmlReport = () => {
     downloadStatusReportHtml({
+      customers,
+      settings,
+      summary,
+    });
+  };
+
+  // Same report, sent to the browser's print dialog so it can be saved as a PDF
+  const handleExportPdfReport = () => {
+    printStatusReportAsPdf({
       customers,
       settings,
       summary,
@@ -778,6 +787,7 @@ export default function App() {
             onResetData={handleResetData}
             onExportCSV={handleExportCSV}
             onExportHtmlReport={handleExportHtmlReport}
+            onExportPdfReport={handleExportPdfReport}
             totalCustomers={customers.length}
             totalTransactions={transactions.length}
           />

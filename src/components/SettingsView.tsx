@@ -23,6 +23,7 @@ import {
   Edit2,
   X,
   FileText,
+  FileDown,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -36,6 +37,7 @@ interface SettingsViewProps {
   onResetData: () => void;
   onExportCSV: () => void;
   onExportHtmlReport: () => void;
+  onExportPdfReport: () => void;
   totalCustomers: number;
   totalTransactions: number;
 }
@@ -51,10 +53,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onResetData,
   onExportCSV,
   onExportHtmlReport,
+  onExportPdfReport,
   totalCustomers,
   totalTransactions,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'usage-rates' | 'org-categories' | 'system'>('org-categories');
+  const [activeSubTab, setActiveSubTab] = useState<'usage-rates' | 'org-categories' | 'system' | 'reports'>('org-categories');
   const [formState, setFormState] = useState<SystemSettings>({
     ...settings,
     stage1MaxPercent: settings.stage1MaxPercent ?? 30,
@@ -343,11 +346,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <button
             type="button"
-            onClick={onExportHtmlReport}
-            title="조직별·회원별 포인트 사용 현황을 HTML 보고서로 내려받습니다."
-            className="px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+            onClick={() => setActiveSubTab('reports')}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'reports'
+                ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4 text-indigo-600" />
             <span>보고서 관리</span>
           </button>
         </div>
@@ -1081,6 +1087,49 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
           </div>
+      )}
+
+      {/* SUB-TAB 4: 보고서 관리 (HTML / PDF 송출) */}
+      {activeSubTab === 'reports' && (
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-5">
+          <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
+            <FileText className="w-5 h-5 text-indigo-600" />
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">보고서 관리</h3>
+              <p className="text-xs text-slate-500">조직별·회원별 포인트 사용 현황을 담은 보고서를 원하는 형식으로 송출합니다.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={onExportHtmlReport}
+              className="p-4 bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 rounded-xl text-xs font-bold text-white flex items-center justify-between transition-colors shadow-xs cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                <span>HTML로 송출하기</span>
+              </div>
+              <span className="text-[11px] text-indigo-200">.html</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onExportPdfReport}
+              className="p-4 bg-rose-600 hover:bg-rose-700 border border-rose-600 rounded-xl text-xs font-bold text-white flex items-center justify-between transition-colors shadow-xs cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <FileDown className="w-4 h-4" />
+                <span>PDF 파일로 송출하기</span>
+              </div>
+              <span className="text-[11px] text-rose-200">.pdf</span>
+            </button>
+          </div>
+
+          <p className="text-[11px] text-slate-400">
+            조직별 배정·사용 실적 요약과 회원별 포인트 사용 현황을 담은 보고서입니다. 인터넷 연결 없이 열람·공유할 수 있어 상사 보고용으로 바로 활용할 수 있습니다. PDF는 인쇄 대화상자에서 "PDF로 저장"을 선택해 내려받습니다.
+          </p>
+        </div>
       )}
 
       {/* Member Excel Bulk Upload Modal */}

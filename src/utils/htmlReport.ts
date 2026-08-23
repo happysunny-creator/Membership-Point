@@ -295,3 +295,39 @@ export function downloadStatusReportHtml(params: StatusReportParams): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+// Renders the report into a hidden iframe and triggers the browser's print dialog scoped to
+// just that content, so the user can "저장(PDF로 저장)" — no PDF library needed, and it works
+// identically offline in the packaged Electron app.
+export function printStatusReportAsPdf(params: StatusReportParams): void {
+  const html = generateStatusReportHtml(params);
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      return;
+    }
+    win.focus();
+    win.print();
+    // Most browsers fire 'afterprint' once the print dialog closes; fall back to a timed
+    // cleanup in case the host environment doesn't dispatch it reliably.
+    win.addEventListener('afterprint', cleanup, { once: true });
+    setTimeout(cleanup, 60000);
+  };
+
+  iframe.srcdoc = html;
+}
