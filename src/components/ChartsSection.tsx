@@ -135,14 +135,16 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   }, [transactions]);
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
-  // Derived entirely from 포인트 사용 및 실적 내역(transactions) for the last 6 months.
+  // Derived entirely from 포인트 사용 및 실적 내역(transactions): cumulative from 1월
+  // through the current calendar month, which is marked (현재).
   const monthlyTrendData = useMemo(() => {
     const now = new Date();
-    const months = Array.from({ length: 6 }, (_, idx) => {
-      const offset = 5 - idx;
-      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = offset === 0 ? `${d.getMonth() + 1}월 (현재)` : `${d.getMonth() + 1}월`;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const months = Array.from({ length: currentMonth }, (_, idx) => {
+      const m = idx + 1;
+      const key = `${currentYear}-${String(m).padStart(2, '0')}`;
+      const label = m === currentMonth ? `${m}월 (현재)` : `${m}월`;
       return { key, label };
     });
 
@@ -439,7 +441,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
         </div>
 
         <div className="pt-2 text-[11px] text-slate-500 border-t border-slate-100 flex items-center justify-between">
-          <span>당월(8월) 합계: <strong className="text-sky-700 font-mono font-bold">{formatPoints(latestData?.monthlySpend || 0)}</strong></span>
+          <span>당월({latestData?.month.split(' ')[0]}) 합계: <strong className="text-sky-700 font-mono font-bold">{formatPoints(latestData?.monthlySpend || 0)}</strong></span>
           <span>총 누적 소진: <strong className="text-indigo-700 font-mono font-bold">{formatPoints(latestData?.cumulativeSpend || 0)}</strong></span>
         </div>
       </div>
