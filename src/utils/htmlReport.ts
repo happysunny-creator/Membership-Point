@@ -177,6 +177,7 @@ export function generateStatusReportHtml({
   }
   table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 13px;
     font-weight: 400;
@@ -185,12 +186,16 @@ export function generateStatusReportHtml({
     padding: 8px 10px;
     text-align: left;
     border-bottom: 1px solid #f1f5f9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   th {
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
     font-size: 12px;
+    text-align: center;
   }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:hover { background: #f8fafc; }
@@ -246,6 +251,14 @@ export function generateStatusReportHtml({
     <section>
       <h2>조직별 배정 및 사용 실적 현황 (${orgList.length}개 조직)</h2>
       <table>
+        <colgroup>
+          <col style="width:26%" />
+          <col style="width:10%" />
+          <col style="width:16%" />
+          <col style="width:16%" />
+          <col style="width:16%" />
+          <col style="width:16%" />
+        </colgroup>
         <thead>
           <tr>
             <th>조직명</th>
@@ -263,6 +276,16 @@ export function generateStatusReportHtml({
     <section>
       <h2>회원별 포인트 사용 현황 (${customers.length}명)</h2>
       <table>
+        <colgroup>
+          <col style="width:15%" />
+          <col style="width:15%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:12.5%" />
+          <col style="width:12.5%" />
+          <col style="width:12.5%" />
+          <col style="width:12.5%" />
+        </colgroup>
         <thead>
           <tr>
             <th>조직명</th>
