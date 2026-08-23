@@ -135,28 +135,29 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   }, [transactions]);
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
+  // Derived entirely from 포인트 사용 및 실적 내역(transactions) for the last 6 months.
   const monthlyTrendData = useMemo(() => {
-    // Current month spend from actual transactions
-    const currentMonthSpend = transactions
-      .filter(t => t.type === 'SPEND' && t.status === 'COMPLETED')
-      .reduce((sum, t) => sum + t.amount, 0);
+    const now = new Date();
+    const months = Array.from({ length: 6 }, (_, idx) => {
+      const offset = 5 - idx;
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = offset === 0 ? `${d.getMonth() + 1}월 (현재)` : `${d.getMonth() + 1}월`;
+      return { key, label };
+    });
 
-    const baseMonthlyData = [
-      { month: '3월', monthlySpend: 4200000 },
-      { month: '4월', monthlySpend: 6850000 },
-      { month: '5월', monthlySpend: 8900000 },
-      { month: '6월', monthlySpend: 11200000 },
-      { month: '7월', monthlySpend: 14500000 },
-      { month: '8월 (현재)', monthlySpend: currentMonthSpend > 0 ? currentMonthSpend : 18780000 },
-    ];
+    const spendByMonth: Record<string, number> = {};
+    transactions.forEach(t => {
+      if (t.type !== 'SPEND' || t.status !== 'COMPLETED') return;
+      const key = t.timestamp.slice(0, 7); // "YYYY-MM"
+      spendByMonth[key] = (spendByMonth[key] || 0) + t.amount;
+    });
 
     let runningTotal = 0;
-    return baseMonthlyData.map(item => {
-      runningTotal += item.monthlySpend;
-      return {
-        ...item,
-        cumulativeSpend: runningTotal,
-      };
+    return months.map(({ key, label }) => {
+      const monthlySpend = spendByMonth[key] || 0;
+      runningTotal += monthlySpend;
+      return { month: label, monthlySpend, cumulativeSpend: runningTotal };
     });
   }, [transactions]);
 
