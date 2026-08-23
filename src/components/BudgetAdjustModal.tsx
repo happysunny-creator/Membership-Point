@@ -137,6 +137,7 @@ export const BudgetAdjustModal: React.FC<BudgetAdjustModalProps> = ({
               placeholder="예: 1000000"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               min="0"
+              step="100000"
               required
             />
           </div>

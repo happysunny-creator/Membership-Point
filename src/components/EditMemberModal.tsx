@@ -184,6 +184,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                 value={totalBudget}
                 onChange={e => setTotalBudget(e.target.value === '' ? '' : Number(e.target.value))}
                 min="0"
+                step="100000"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 required
               />

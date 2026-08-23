@@ -74,7 +74,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [name, setName] = useState(''); // 성함
   const [position, setPosition] = useState(''); // 직위 (별도 셀)
   const [manager, setManager] = useState(''); // 담당자
-  const [budget, setBudget] = useState<number | ''>(5000000); // 금액
+  const [budget, setBudget] = useState<number | ''>(1000000); // 금액
   const [notes, setNotes] = useState(''); // 비고 및 관리메모
 
   // Excel batch states
@@ -139,7 +139,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setName('');
     setPosition('');
     setManager('');
-    setBudget(5000000);
+    setBudget(1000000);
     setNotes('');
   };
 
@@ -368,7 +368,8 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   onChange={e => setBudget(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="예: 5000000"
                   className="w-full px-3 py-2.5 bg-slate-50/70 border border-slate-200 rounded-lg text-slate-900 font-bold text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all pr-8"
-                  min="1"
+                  min="0"
+                  step="100000"
                   required
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">

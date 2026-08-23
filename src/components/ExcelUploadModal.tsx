@@ -379,6 +379,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                         type="number"
                         value={defaultNewCustomerBudget}
                         onChange={e => setDefaultNewCustomerBudget(Number(e.target.value))}
+                        step="100000"
                         className="w-32 px-2 py-1 bg-white border border-purple-200 rounded text-slate-900 font-bold text-xs"
                       />
                       <span className="text-purple-700 font-semibold text-[11px]">P</span>

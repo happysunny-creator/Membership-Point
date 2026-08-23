@@ -602,7 +602,8 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                   value={pointOpAmount}
                   onChange={e => setPointOpAmount(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="예: 500000"
-                  min="1"
+                  min="0"
+                  step="100000"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
