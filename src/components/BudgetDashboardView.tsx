@@ -881,23 +881,23 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                                     </td>
 
                                     {/* 배정 예산 */}
-                                    <td className="py-2.5 px-3 text-right font-extrabold text-slate-900 font-mono">
+                                    <td className="py-2.5 px-3 text-right text-xs text-slate-900 font-mono">
                                       {formatPoints(cust.totalBudget)}
                                     </td>
 
                                     {/* 사용 실적 */}
-                                    <td className="py-2.5 px-3 text-right font-extrabold text-blue-600 font-mono">
+                                    <td className="py-2.5 px-3 text-right text-xs text-blue-600 font-mono">
                                       {formatPoints(cust.usedPoints)}
                                     </td>
 
                                     {/* 잔여 포인트 */}
-                                    <td className="py-2.5 px-3 text-right font-extrabold text-emerald-600 font-mono">
+                                    <td className="py-2.5 px-3 text-right text-xs text-emerald-600 font-mono">
                                       {formatPoints(cust.remainingPoints)}
                                     </td>
 
                                     {/* 사용률 */}
                                     <td className="py-2.5 px-3">
-                                      <span className="font-extrabold font-mono text-rose-600">{formatPercent(rate)}</span>
+                                      <span className="text-xs font-mono text-rose-600">{formatPercent(rate)}</span>
                                     </td>
 
                                     {/* 작업 버튼 */}
