@@ -67,6 +67,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       value: item.used,
       count: item.count,
       percent: totalSpend > 0 ? (item.used / totalSpend) * 100 : 0,
+      burnRate: item.budget > 0 ? (item.used / item.budget) * 100 : 0,
       color: orgColors[idx % orgColors.length],
     }));
 
@@ -245,8 +246,11 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                 <span className="font-bold text-slate-900 text-xs">
                   {formatPoints(item.value)}
                 </span>
-                <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200 min-w-[48px] text-center">
-                  {formatPercent(item.percent)}
+                <span
+                  className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 min-w-[48px] text-center"
+                  title="조직 사용률 (사용실적 / 배정예산)"
+                >
+                  {formatPercent(item.burnRate)}
                 </span>
               </div>
             </div>

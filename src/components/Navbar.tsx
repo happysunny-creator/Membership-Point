@@ -33,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-lg font-extrabold text-indigo-950 tracking-tight">
-                  남산 리더십센터 / 스마일즈 멤버십 포인트 운영 Dashboard
+                  남산 리더십센터 / 스마일즈 멤버십 포인트 관리 Dashboard
                 </h1>
                 <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                   2026 통합 시스템

@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import { Customer, BudgetSummary, SystemSettings } from '../types';
 import {
   Layers,
@@ -19,7 +18,6 @@ import {
   TrendingUp,
   User,
   X,
-  Download,
 } from 'lucide-react';
 import {
   formatPoints,
@@ -333,64 +331,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     setSelectedDeptFilter('all');
     setStatusFilter('all');
     setSearchTerm('');
-  };
-
-  // Download the currently displayed 포인트 사용 현황 data as an Excel file:
-  // organization-level totals first, then member-level detail below, using the
-  // same grouped/sorted `orgGroups` data the on-screen cards and table render from.
-  const handleDownloadPointUsageExcel = () => {
-    const columns = ['조직명', '소속부서', '성함', '직위', '배정예산', '사용실적', '잔여 포인트', '사용률'];
-    const rows: (string | number)[][] = [];
-
-    rows.push(['[조직별 합계]']);
-    rows.push(columns);
-    orgGroups.forEach(org => {
-      rows.push([
-        org.company,
-        '',
-        '',
-        '',
-        org.totalBudget,
-        org.totalUsed,
-        org.totalRemaining,
-        `${org.burnRate.toFixed(1)}%`,
-      ]);
-    });
-
-    rows.push([]);
-    rows.push(['[회원별 상세]']);
-    rows.push(columns);
-    orgGroups.forEach(org => {
-      org.customers.forEach(cust => {
-        const { name: cleanName, position: cleanPosition } = separateNameAndPosition(cust.name, cust.position);
-        rows.push([
-          org.company,
-          cust.department,
-          cleanName,
-          cleanPosition,
-          cust.totalBudget,
-          cust.usedPoints,
-          cust.remainingPoints,
-          `${calculateBurnRate(cust.usedPoints, cust.totalBudget).toFixed(1)}%`,
-        ]);
-      });
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [
-      { wch: 22 }, // 조직명
-      { wch: 20 }, // 소속부서
-      { wch: 12 }, // 성함
-      { wch: 12 }, // 직위
-      { wch: 14 }, // 배정예산
-      { wch: 14 }, // 사용실적
-      { wch: 14 }, // 잔여 포인트
-      { wch: 10 }, // 사용률
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '포인트 사용 현황');
-    XLSX.writeFile(wb, `포인트_사용_실적_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
@@ -1165,19 +1105,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
             </table>
           </div>
         )}
-      </div>
-
-      {/* Bottom: Excel Export */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleDownloadPointUsageExcel}
-          className="px-3.5 py-2 text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          title="포인트 사용 실적 엑셀 다운로드"
-        >
-          <Download className="w-4 h-4 text-slate-600" />
-          <span>포인트 사용 실적 내려받기</span>
-        </button>
       </div>
     </div>
   );

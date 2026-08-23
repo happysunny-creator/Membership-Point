@@ -157,7 +157,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
               <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <span>조직별 포인트 사용 실적 및 지출 분석</span>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  총 {orgAnalytics.totalOrgsCount}개 조직
+                  총 {orgAnalytics.totalOrgsCount}개 조직 / {customers.length}명
                 </span>
               </h2>
             </div>

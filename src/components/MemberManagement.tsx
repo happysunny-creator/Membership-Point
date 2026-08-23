@@ -190,9 +190,9 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               setAddModalMode('excel');
               setIsAddModalOpen(true);
             }}
-            className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            className="h-10 px-3.5 bg-blue-800 hover:bg-blue-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
           >
-            <UploadCloud className="w-4 h-4 text-blue-600" />
+            <UploadCloud className="w-4 h-4" />
             <span>회원 엑셀 일괄 등록</span>
           </button>
 
@@ -205,15 +205,15 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shadow-blue-200"
           >
             <UserPlus className="w-4 h-4" />
-            <span>신규 회원 직접 등록</span>
+            <span>회원 직접 등록</span>
           </button>
 
           <button
             type="button"
             onClick={() => downloadCustomerDataExcel(customers)}
-            className="h-10 px-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
           >
-            <Download className="w-4 h-4 text-slate-500" />
+            <Download className="w-4 h-4 text-blue-600" />
             <span>회원 정보 다운받기</span>
           </button>
         </div>

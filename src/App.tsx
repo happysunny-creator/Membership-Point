@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import {
   CategoryId,
   Customer,
@@ -9,7 +10,15 @@ import {
   SystemSettings,
 } from './types';
 import { CATEGORIES, INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS } from './data/mockData';
-import { calculateBurnRate, exportToCSV, formatPoints, getCustomerStatusFromBurnRate, setCurrencyUnit } from './utils/formatters';
+import {
+  calculateBurnRate,
+  exportToCSV,
+  formatPoints,
+  getCustomerStatusFromBurnRate,
+  setCurrencyUnit,
+  sortByOrgPriority,
+} from './utils/formatters';
+import { separateNameAndPosition } from './utils/nameParser';
 
 import { Navbar } from './components/Navbar';
 import { BudgetDashboardView } from './components/BudgetDashboardView';
@@ -23,7 +32,7 @@ import { CategoryAnalyticsView } from './components/CategoryAnalyticsView';
 import { ExcelUploadModal } from './components/ExcelUploadModal';
 import { SettingsView } from './components/SettingsView';
 import { MemberManagement } from './components/MemberManagement';
-import { CheckCircle2, X, FileSpreadsheet, PlusCircle } from 'lucide-react';
+import { CheckCircle2, X, FileSpreadsheet, PlusCircle, Download } from 'lucide-react';
 
 const INITIAL_SETTINGS: SystemSettings = {
   stage1MaxPercent: 30,
@@ -536,6 +545,91 @@ export default function App() {
     exportToCSV(`회원별_포인트_예산_실적_${new Date().toISOString().slice(0, 10)}.csv`, customerExportData);
   };
 
+  // Download point usage data as an Excel file: organization-level totals
+  // first, then member-level detail below, grouped by the same org display
+  // priority used across the dashboard.
+  const handleDownloadPointUsageExcel = () => {
+    const map: Record<
+      string,
+      { company: string; customers: Customer[]; totalBudget: number; totalUsed: number; totalRemaining: number }
+    > = {};
+
+    customers.forEach(c => {
+      const orgName = c.company.trim() || '미지정 조직';
+      if (!map[orgName]) {
+        map[orgName] = { company: orgName, customers: [], totalBudget: 0, totalUsed: 0, totalRemaining: 0 };
+      }
+      map[orgName].customers.push(c);
+      map[orgName].totalBudget += c.totalBudget;
+      map[orgName].totalUsed += c.usedPoints;
+      map[orgName].totalRemaining += c.remainingPoints;
+    });
+
+    const list = Object.values(map).map(org => ({
+      ...org,
+      burnRate: org.totalBudget > 0 ? (org.totalUsed / org.totalBudget) * 100 : 0,
+    }));
+
+    const orgGroups = sortByOrgPriority(
+      list,
+      settings.orgPriorityOrder,
+      (a, b) => b.totalBudget - a.totalBudget
+    );
+
+    const columns = ['조직명', '소속부서', '성함', '직위', '배정예산', '사용실적', '잔여 포인트', '사용률'];
+    const rows: (string | number)[][] = [];
+
+    rows.push(['[조직별 합계]']);
+    rows.push(columns);
+    orgGroups.forEach(org => {
+      rows.push([
+        org.company,
+        '',
+        '',
+        '',
+        org.totalBudget,
+        org.totalUsed,
+        org.totalRemaining,
+        `${org.burnRate.toFixed(1)}%`,
+      ]);
+    });
+
+    rows.push([]);
+    rows.push(['[회원별 상세]']);
+    rows.push(columns);
+    orgGroups.forEach(org => {
+      org.customers.forEach(cust => {
+        const { name: cleanName, position: cleanPosition } = separateNameAndPosition(cust.name, cust.position);
+        rows.push([
+          org.company,
+          cust.department,
+          cleanName,
+          cleanPosition,
+          cust.totalBudget,
+          cust.usedPoints,
+          cust.remainingPoints,
+          `${calculateBurnRate(cust.usedPoints, cust.totalBudget).toFixed(1)}%`,
+        ]);
+      });
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 22 }, // 조직명
+      { wch: 20 }, // 소속부서
+      { wch: 12 }, // 성함
+      { wch: 12 }, // 직위
+      { wch: 14 }, // 배정예산
+      { wch: 14 }, // 사용실적
+      { wch: 14 }, // 잔여 포인트
+      { wch: 10 }, // 사용률
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '포인트 사용 현황');
+    XLSX.writeFile(wb, `포인트_사용_실적_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans relative">
       {/* Toast Notification */}
@@ -624,11 +718,12 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
                   id="btn-perf-excel-upload"
+                  type="button"
                   onClick={() => setIsExcelUploadOpen(true)}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                  className="h-10 px-3.5 bg-blue-800 hover:bg-blue-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
                   <span>실적 엑셀 업로드</span>
@@ -636,14 +731,25 @@ export default function App() {
 
                 <button
                   id="btn-perf-add-transaction"
+                  type="button"
                   onClick={() => {
                     setTargetCustomerForModal(null);
                     setIsAddTransactionOpen(true);
                   }}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                  className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shadow-blue-200"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>실적 직접 등록</span>
+                </button>
+
+                <button
+                  id="btn-perf-download-usage"
+                  type="button"
+                  onClick={handleDownloadPointUsageExcel}
+                  className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <Download className="w-4 h-4 text-blue-600" />
+                  <span>포인트 사용 실적 다운받기</span>
                 </button>
               </div>
             </div>
