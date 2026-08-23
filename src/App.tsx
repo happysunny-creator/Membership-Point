@@ -19,6 +19,7 @@ import {
 } from './utils/formatters';
 import { separateNameAndPosition } from './utils/nameParser';
 import { loadPersistedState, savePersistedState } from './utils/persistence';
+import { downloadStatusReportHtml } from './utils/htmlReport';
 
 import { Navbar } from './components/Navbar';
 import { BudgetDashboardView } from './components/BudgetDashboardView';
@@ -514,6 +515,16 @@ export default function App() {
     exportToCSV(`회원별_포인트_예산_실적_${new Date().toISOString().slice(0, 10)}.csv`, customerExportData);
   };
 
+  // Export a self-contained HTML status report (조직별 현황 + 최근 실적) for sharing with management
+  const handleExportHtmlReport = () => {
+    downloadStatusReportHtml({
+      companyName: settings.companyName || '멤버십 포인트 관리',
+      customers,
+      settings,
+      summary,
+    });
+  };
+
   // Download point usage data as an Excel file: organization-level totals
   // first, then member-level detail below, grouped by the same org display
   // priority used across the dashboard.
@@ -767,6 +778,7 @@ export default function App() {
             onOpenExcelUpload={() => setIsExcelUploadOpen(true)}
             onResetData={handleResetData}
             onExportCSV={handleExportCSV}
+            onExportHtmlReport={handleExportHtmlReport}
             totalCustomers={customers.length}
             totalTransactions={transactions.length}
           />
