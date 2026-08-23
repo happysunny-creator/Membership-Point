@@ -19,7 +19,7 @@ import {
 } from './utils/formatters';
 import { separateNameAndPosition } from './utils/nameParser';
 import { loadPersistedState, savePersistedState } from './utils/persistence';
-import { downloadStatusReportHtml, printStatusReportAsPdf } from './utils/htmlReport';
+import { downloadStatusReportHtml, downloadStatusReportPdf } from './utils/htmlReport';
 
 import { Navbar } from './components/Navbar';
 import { BudgetDashboardView } from './components/BudgetDashboardView';
@@ -524,12 +524,15 @@ export default function App() {
     });
   };
 
-  // Same report, sent to the browser's print dialog so it can be saved as a PDF
+  // Same report, rendered directly to a PDF file and saved to disk (no print dialog)
   const handleExportPdfReport = () => {
-    printStatusReportAsPdf({
+    downloadStatusReportPdf({
       customers,
       settings,
       summary,
+    }).catch(() => {
+      setToastMessage('PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setTimeout(() => setToastMessage(null), 4000);
     });
   };
 

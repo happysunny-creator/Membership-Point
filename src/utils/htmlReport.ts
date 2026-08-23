@@ -93,11 +93,12 @@ export function generateStatusReportHtml({
 <meta charset="UTF-8" />
 <title>${escapeHtml(reportTitle)}</title>
 <style>
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; font-family: inherit; }
   body {
     margin: 0;
     padding: 40px 48px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif;
+    font-size: 13px;
     color: #1e293b;
     background: #f1f5f9;
   }
@@ -118,16 +119,18 @@ export function generateStatusReportHtml({
     margin-bottom: 28px;
   }
   .header h1 {
-    font-size: 22px;
+    font-size: 20px;
+    font-weight: 700;
     margin: 0 0 4px;
   }
   .header p {
     margin: 0;
     font-size: 12px;
+    font-weight: 400;
     color: #64748b;
   }
   .badge {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: #4338ca;
     background: #eef2ff;
@@ -148,24 +151,26 @@ export function generateStatusReportHtml({
     padding: 14px 16px;
   }
   .kpi .label {
-    font-size: 11px;
+    font-size: 12px;
     color: #64748b;
     font-weight: 600;
     margin-bottom: 6px;
   }
   .kpi .value {
-    font-size: 19px;
-    font-weight: 800;
+    font-size: 20px;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
   .kpi .sub {
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 400;
     color: #94a3b8;
     margin-top: 4px;
   }
   section { margin-bottom: 32px; }
   h2 {
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
     margin: 0 0 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid #e2e8f0;
@@ -173,7 +178,8 @@ export function generateStatusReportHtml({
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 400;
   }
   th, td {
     padding: 8px 10px;
@@ -184,7 +190,7 @@ export function generateStatusReportHtml({
     background: #f8fafc;
     color: #475569;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 12px;
   }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:hover { background: #f8fafc; }
@@ -192,7 +198,8 @@ export function generateStatusReportHtml({
     margin-top: 36px;
     padding-top: 14px;
     border-top: 1px solid #e2e8f0;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 400;
     color: #94a3b8;
     display: flex;
     justify-content: space-between;
@@ -242,11 +249,11 @@ export function generateStatusReportHtml({
         <thead>
           <tr>
             <th>조직명</th>
-            <th class="num">인원</th>
-            <th class="num">배정 예산</th>
-            <th class="num">사용 실적</th>
-            <th class="num">잔여 포인트</th>
-            <th class="num">사용률</th>
+            <th>인원</th>
+            <th>배정 예산</th>
+            <th>사용 실적</th>
+            <th>잔여 포인트</th>
+            <th>사용률</th>
           </tr>
         </thead>
         <tbody>${orgRows || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">데이터가 없습니다.</td></tr>'}</tbody>
@@ -262,10 +269,10 @@ export function generateStatusReportHtml({
             <th>소속</th>
             <th>성함</th>
             <th>직책</th>
-            <th class="num">배정포인트</th>
-            <th class="num">사용실적</th>
-            <th class="num">잔여포인트</th>
-            <th class="num">사용률</th>
+            <th>배정포인트</th>
+            <th>사용실적</th>
+            <th>잔여포인트</th>
+            <th>사용률</th>
           </tr>
         </thead>
         <tbody>${memberRows || '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">데이터가 없습니다.</td></tr>'}</tbody>
@@ -296,38 +303,65 @@ export function downloadStatusReportHtml(params: StatusReportParams): void {
   URL.revokeObjectURL(url);
 }
 
-// Renders the report into a hidden iframe and triggers the browser's print dialog scoped to
-// just that content, so the user can "저장(PDF로 저장)" — no PDF library needed, and it works
-// identically offline in the packaged Electron app.
-export function printStatusReportAsPdf(params: StatusReportParams): void {
+// Renders the report into a hidden iframe, rasterizes it with html2canvas, and paginates the
+// image into a multi-page A4 PDF with jsPDF — then saves it straight to disk (same silent
+// blob-download mechanism as the HTML/Excel exports), with no print dialog in the way.
+export async function downloadStatusReportPdf(params: StatusReportParams): Promise<void> {
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import('jspdf'),
+    import('html2canvas'),
+  ]);
+
   const html = generateStatusReportHtml(params);
 
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
+  iframe.style.left = '-99999px';
+  iframe.style.top = '0';
+  iframe.style.width = '960px';
   iframe.style.height = '0';
   iframe.style.border = '0';
   document.body.appendChild(iframe);
 
-  const cleanup = () => {
-    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-  };
+  try {
+    await new Promise<void>((resolve, reject) => {
+      iframe.onload = () => resolve();
+      iframe.onerror = () => reject(new Error('보고서 렌더링에 실패했습니다.'));
+      iframe.srcdoc = html;
+    });
 
-  iframe.onload = () => {
-    const win = iframe.contentWindow;
-    if (!win) {
-      cleanup();
-      return;
+    const doc = iframe.contentDocument;
+    const sheet = doc?.querySelector('.sheet') as HTMLElement | null;
+    if (!doc || !sheet) throw new Error('보고서 내용을 찾을 수 없습니다.');
+
+    // Let webfonts/layout settle, then size the iframe to the real content height so
+    // html2canvas captures the full report instead of a clipped viewport.
+    await new Promise(resolve => setTimeout(resolve, 50));
+    iframe.style.height = `${doc.body.scrollHeight}px`;
+
+    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff' });
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
     }
-    win.focus();
-    win.print();
-    // Most browsers fire 'afterprint' once the print dialog closes; fall back to a timed
-    // cleanup in case the host environment doesn't dispatch it reliably.
-    win.addEventListener('afterprint', cleanup, { once: true });
-    setTimeout(cleanup, 60000);
-  };
 
-  iframe.srcdoc = html;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    pdf.save(`포인트_운영_현황_보고서_${dateStr}.pdf`);
+  } finally {
+    document.body.removeChild(iframe);
+  }
 }

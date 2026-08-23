@@ -247,14 +247,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 
                     {/* 4. 직위 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      {position ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 font-medium border border-slate-200">
-                          <Briefcase className="w-3 h-3 text-slate-400" />
-                          <span>{position}</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
+                      <span className="font-bold text-slate-900">{position || '-'}</span>
                     </td>
 
                     {/* 5. 사용날짜 */}
