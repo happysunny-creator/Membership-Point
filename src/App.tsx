@@ -18,6 +18,7 @@ import {
   sortByOrgPriority,
 } from './utils/formatters';
 import { separateNameAndPosition } from './utils/nameParser';
+import { loadPersistedState, savePersistedState } from './utils/persistence';
 
 import { Navbar } from './components/Navbar';
 import { BudgetDashboardView } from './components/BudgetDashboardView';
@@ -54,18 +55,26 @@ const INITIAL_SETTINGS: SystemSettings = {
   orgPriorityOrder: [],
 };
 
+const persisted = loadPersistedState();
+
 export default function App() {
-  // 1. Core State
-  const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
-  const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+  // 1. Core State — restored from local storage when available, so data
+  // accumulates across app restarts instead of resetting to the seed data.
+  const [customers, setCustomers] = useState<Customer[]>(persisted?.customers ?? INITIAL_CUSTOMERS);
+  const [transactions, setTransactions] = useState<Transaction[]>(persisted?.transactions ?? INITIAL_TRANSACTIONS);
   const [activeTab, setActiveTab] = useState<MainTab>('budget');
-  const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
+  const [settings, setSettings] = useState<SystemSettings>(persisted?.settings ?? INITIAL_SETTINGS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Keep the point/currency unit used by formatPoints() in sync with settings
   useEffect(() => {
     setCurrencyUnit(settings.currencyUnit);
   }, [settings.currencyUnit]);
+
+  // Auto-save on every change so data accumulates locally across app restarts
+  useEffect(() => {
+    savePersistedState({ customers, transactions, settings });
+  }, [customers, transactions, settings]);
 
   // 2. Filter State
   const [filterState, setFilterState] = useState<FilterState>({
