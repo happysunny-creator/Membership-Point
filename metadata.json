@@ -1,0 +1,8 @@
+{
+  "name": "Remix 고객 포인트 예산 및 사용실적 대시보드",
+  "description": "고객별 포인트 예산 관리, 엑셀 파일 일괄 업로드 및 소진 실적 분석, 카테고리별 사용 현황 필터링을 제공하는 대시보드",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
