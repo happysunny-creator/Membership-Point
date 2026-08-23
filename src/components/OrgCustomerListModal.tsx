@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Customer, Transaction, Category } from '../types';
+import { Customer, Transaction } from '../types';
 import {
   formatPoints,
   formatPercent,
@@ -22,7 +22,6 @@ interface OrgCustomerListModalProps {
   orgName: string;
   customers: Customer[];
   transactions: Transaction[];
-  categories?: Category[];
   onOpenCustomerDetail?: (customer: Customer) => void;
 }
 
@@ -32,7 +31,6 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
   orgName,
   customers,
   transactions,
-  categories = [],
   onOpenCustomerDetail,
 }) => {
   // Filter members of this organization
@@ -201,18 +199,13 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                             }`}
                           >
                             <td className="py-2.5 px-4">
-                              <div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-slate-900">{cleanName}</span>
-                                  {cleanPos && (
-                                    <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
-                                      {cleanPos}
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                  ID: {member.id}
-                                </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-900">{cleanName}</span>
+                                {cleanPos && (
+                                  <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                                    {cleanPos}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="py-2.5 px-3 text-slate-600">
@@ -314,8 +307,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                   <thead className="sticky top-0 bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold z-10">
                     <tr>
                       <th className="py-2.5 px-4">사용날짜 (일시)</th>
-                      <th className="py-2.5 px-3">카테고리</th>
-                      <th className="py-2.5 px-3">사용처 (가맹점)</th>
+                      <th className="py-2.5 px-3">사용처</th>
                       <th className="py-2.5 px-3">내용 / 항목</th>
                       <th className="py-2.5 px-4 text-right">사용금액</th>
                       <th className="py-2.5 px-3 text-center">상태</th>
@@ -324,37 +316,24 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                   <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
                     {!activeCustomer ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-400">
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
                           상단 목록에서 회원을 선택해주세요.
                         </td>
                       </tr>
                     ) : activeCustomerTxns.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-400">
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
                           선택된 회원의 기록된 거래 내역이 없습니다.
                         </td>
                       </tr>
                     ) : (
                       activeCustomerTxns.map(txn => {
-                        const cat = categories.find(c => c.id === txn.categoryId);
                         const isSpend = txn.type === 'SPEND';
 
                         return (
                           <tr key={txn.id} className="hover:bg-slate-50/80">
                             <td className="py-2.5 px-4 whitespace-nowrap text-slate-600 font-medium">
                               {txn.timestamp}
-                            </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap">
-                              <span
-                                className="px-2 py-0.5 rounded-md text-[11px] font-medium border"
-                                style={{
-                                  color: cat?.color || '#64748b',
-                                  borderColor: `${cat?.color || '#64748b'}30`,
-                                  backgroundColor: `${cat?.color || '#64748b'}10`,
-                                }}
-                              >
-                                {cat?.shortName || txn.categoryName || txn.categoryId}
-                              </span>
                             </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-800">
                               {txn.merchant}

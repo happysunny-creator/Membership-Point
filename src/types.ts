@@ -101,7 +101,6 @@ export interface SystemSettings {
 
 export interface FilterState {
   searchQuery: string;
-  selectedCategory: CategoryId | 'all';
   selectedCustomer: string | 'all';
   selectedTier: CustomerTier | 'all';
   selectedStatus: CustomerStatus | 'all';

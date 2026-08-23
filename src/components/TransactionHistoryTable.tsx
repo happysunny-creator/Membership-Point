@@ -93,7 +93,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              조회된 실적 합계: <span className="font-bold text-blue-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span> (조직명, 소속 부서, 성함, 직위, 사용일시, 사용처, 사용금액)
+              조회된 실적 합계: <span className="font-bold text-blue-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span>
             </p>
           </div>
         </div>
@@ -137,7 +137,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
               <th className="py-3 px-4 text-left">
                 <div className="flex items-center gap-1.5">
                   <Store className="w-3.5 h-3.5 text-slate-400" />
-                  <span>사용처 (가맹점)</span>
+                  <span>사용처</span>
                 </div>
               </th>
               <th className="py-3 px-4 sm:px-6 text-right">
@@ -156,7 +156,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <History className="w-8 h-8 text-slate-300" />
                     <p className="text-sm font-medium">조회된 포인트 실적 내역이 없습니다.</p>
-                    <p className="text-xs text-slate-400">카테고리 또는 기간 필터를 변경해보세요.</p>
+                    <p className="text-xs text-slate-400">검색 또는 필터 조건을 변경해보세요.</p>
                   </div>
                 </td>
               </tr>
@@ -367,7 +367,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">사용처 (가맹점)</span>
+                  <span className="text-slate-500">사용처</span>
                   <span className="font-semibold text-slate-800">{deletingTxn.merchant}</span>
                 </div>
                 <div className="flex justify-between">

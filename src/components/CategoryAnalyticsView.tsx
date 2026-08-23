@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Category, CategoryId, Customer, SystemSettings, Transaction } from '../types';
+import { Customer, SystemSettings, Transaction } from '../types';
 import { formatPoints, formatPercent, sortByOrgPriority } from '../utils/formatters';
 import {
   Layers,
@@ -11,19 +11,13 @@ import {
 import { OrgCustomerListModal } from './OrgCustomerListModal';
 
 interface CategoryAnalyticsViewProps {
-  categories?: Category[];
   customers: Customer[];
   transactions: Transaction[];
   settings?: SystemSettings;
-  categorySpendingMap?: Record<CategoryId, number>;
-  totalSpend?: number;
-  onSelectCategory?: (categoryId: CategoryId) => void;
-  onViewTransactionsOfCategory?: (categoryId: CategoryId) => void;
   onSelectCustomer?: (customer: Customer) => void;
 }
 
 export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
-  categories = [],
   customers,
   transactions,
   settings,
@@ -181,11 +175,6 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
               <span className="text-rose-600">({formatPercent(orgAnalytics.overallRate)})</span>
             </span>
           </div>
-          <div className="h-7 w-px bg-slate-200 hidden sm:block" />
-          <div className="px-2">
-            <span className="text-slate-400 block text-[11px] font-medium">총 소속 인원</span>
-            <span className="font-extrabold text-blue-600 text-sm">{customers.length}명</span>
-          </div>
         </div>
       </div>
 
@@ -309,7 +298,6 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
           orgName={selectedOrgForModal}
           customers={customers}
           transactions={transactions}
-          categories={categories}
           onOpenCustomerDetail={onSelectCustomer}
         />
       )}

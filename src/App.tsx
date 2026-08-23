@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
-  CategoryId,
   Customer,
   FilterState,
   Transaction,
@@ -9,7 +8,7 @@ import {
   MainTab,
   SystemSettings,
 } from './types';
-import { CATEGORIES, INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS } from './data/mockData';
+import { INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS } from './data/mockData';
 import {
   calculateBurnRate,
   exportToCSV,
@@ -71,7 +70,6 @@ export default function App() {
   // 2. Filter State
   const [filterState, setFilterState] = useState<FilterState>({
     searchQuery: '',
-    selectedCategory: 'all',
     selectedCustomer: 'all',
     selectedTier: 'all',
     selectedStatus: 'all',
@@ -88,34 +86,6 @@ export default function App() {
   const [isAdjustBudgetOpen, setIsAdjustBudgetOpen] = useState<boolean>(false);
   const [isExcelUploadOpen, setIsExcelUploadOpen] = useState<boolean>(false);
   const [targetCustomerForModal, setTargetCustomerForModal] = useState<Customer | null>(null);
-
-  // 4. Calculate Category Spending Map from Completed Spend Transactions
-  const categorySpendingMap = useMemo(() => {
-    const map: Record<CategoryId, number> = {
-      shopping: 0,
-      fnb: 0,
-      culture: 0,
-      travel: 0,
-      education: 0,
-      health: 0,
-      transport: 0,
-      digital: 0,
-    };
-
-    transactions.forEach(txn => {
-      if (txn.type === 'SPEND' && txn.status === 'COMPLETED') {
-        if (map[txn.categoryId] !== undefined) {
-          map[txn.categoryId] += txn.amount;
-        }
-      }
-    });
-
-    return map;
-  }, [transactions]);
-
-  const totalSpend = useMemo(() => {
-    return (Object.values(categorySpendingMap) as number[]).reduce((acc, curr) => acc + curr, 0);
-  }, [categorySpendingMap]);
 
   // 5. Calculate Budget Summary Stats
   const summary: BudgetSummary = useMemo(() => {
@@ -160,11 +130,6 @@ export default function App() {
   // 7. Filter and Sort Transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter(txn => {
-      // Category filter
-      if (filterState.selectedCategory !== 'all' && txn.categoryId !== filterState.selectedCategory) {
-        return false;
-      }
-
       // Customer filter
       if (filterState.selectedCustomer !== 'all' && txn.customerId !== filterState.selectedCustomer) {
         return false;
@@ -207,14 +172,9 @@ export default function App() {
   }, [transactions, filterState]);
 
   // 8. Handlers
-  const handleCategoryChange = (categoryId: CategoryId | 'all') => {
-    setFilterState(prev => ({ ...prev, selectedCategory: categoryId }));
-  };
-
   const handleResetFilters = () => {
     setFilterState({
       searchQuery: '',
-      selectedCategory: 'all',
       selectedCustomer: 'all',
       selectedTier: 'all',
       selectedStatus: 'all',
@@ -762,16 +722,9 @@ export default function App() {
 
             {/* Organization Analytics Grid (조직별 포인트 사용 실적) */}
             <CategoryAnalyticsView
-              categories={CATEGORIES}
               customers={customers}
               transactions={transactions}
               settings={settings}
-              categorySpendingMap={categorySpendingMap}
-              totalSpend={totalSpend}
-              onSelectCategory={handleCategoryChange}
-              onViewTransactionsOfCategory={catId => {
-                handleCategoryChange(catId);
-              }}
               onSelectCustomer={cust => setSelectedCustomer(cust)}
             />
 
@@ -815,7 +768,6 @@ export default function App() {
       {selectedCustomer && (
         <CustomerDetailModal
           customer={selectedCustomer}
-          categories={CATEGORIES}
           transactions={transactions}
           onClose={() => setSelectedCustomer(null)}
           onOpenAddTransaction={cust => {

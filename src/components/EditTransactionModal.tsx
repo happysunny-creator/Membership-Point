@@ -104,7 +104,6 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">실적 내역 직접 수정</h2>
-              <p className="text-xs text-slate-500">실적 ID: {transaction.id}</p>
             </div>
           </div>
           <button

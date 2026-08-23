@@ -1,5 +1,5 @@
 import React from 'react';
-import { Category, Customer, Transaction } from '../types';
+import { Customer, Transaction } from '../types';
 import {
   formatPoints,
   formatPercent,
@@ -27,7 +27,6 @@ import {
 
 interface CustomerDetailModalProps {
   customer: Customer | null;
-  categories: Category[];
   transactions: Transaction[];
   onClose: () => void;
   onOpenAddTransaction: (customer: Customer) => void;
@@ -36,7 +35,6 @@ interface CustomerDetailModalProps {
 
 export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   customer,
-  categories,
   transactions,
   onClose,
   onOpenAddTransaction,
@@ -97,8 +95,6 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <Network className="w-3 h-3 text-cyan-600" />
                   <span>{customer.department}</span>
                 </span>
-                <span>·</span>
-                <span className="font-mono text-slate-400">ID: {customer.id}</span>
               </p>
             </div>
           </div>
@@ -245,7 +241,6 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                     <th className="py-2.5 px-4">일시</th>
-                    <th className="py-2.5 px-3">카테고리</th>
                     <th className="py-2.5 px-3">가맹점 및 내용</th>
                     <th className="py-2.5 px-4 text-right">금액</th>
                     <th className="py-2.5 px-3 text-center">상태</th>
@@ -254,24 +249,18 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {customerTxns.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                      <td colSpan={4} className="py-8 text-center text-slate-400">
                         기록된 거래 내역이 없습니다.
                       </td>
                     </tr>
                   ) : (
                     customerTxns.map(txn => {
-                      const cat = categories.find(c => c.id === txn.categoryId);
                       const isSpend = txn.type === 'SPEND';
 
                       return (
                         <tr key={txn.id} className="hover:bg-slate-50/60">
                           <td className="py-2.5 px-4 whitespace-nowrap text-slate-600">
                             {txn.timestamp}
-                          </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap">
-                            <span className="text-[11px] font-medium text-slate-800">
-                              {cat?.shortName || txn.categoryName}
-                            </span>
                           </td>
                           <td className="py-2.5 px-3">
                             <div className="font-semibold text-slate-800">{txn.description}</div>
