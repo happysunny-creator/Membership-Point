@@ -340,6 +340,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <Sliders className="w-4 h-4 text-slate-600" />
             <span>운영 정책 & 데이터</span>
           </button>
+
+          <button
+            type="button"
+            onClick={onExportHtmlReport}
+            title="조직별·회원별 포인트 사용 현황을 HTML 보고서로 내려받습니다."
+            className="px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+          >
+            <FileText className="w-4 h-4" />
+            <span>보고서 관리</span>
+          </button>
         </div>
       </div>
 
@@ -1067,23 +1077,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                   <span className="text-[10px] text-rose-500">리셋</span>
                 </button>
-
-                {/* Row 5: 보고용 HTML 리포트 송출 (전체 너비) */}
-                <button
-                  type="button"
-                  onClick={onExportHtmlReport}
-                  className="sm:col-span-2 p-3 bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 rounded-xl text-xs font-bold text-white flex items-center justify-between transition-colors shadow-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    <span>현재 현황 HTML로 송출하기</span>
-                  </div>
-                  <span className="text-[11px] text-indigo-200">보고용 · .html</span>
-                </button>
               </div>
-              <p className="text-[11px] text-slate-400 -mt-1">
-                조직별 배정·사용 실적 요약과 최근 실적 내역을 담은 리포트를 HTML 파일로 내려받습니다. 인터넷 연결 없이 브라우저에서 열람·인쇄(PDF 저장)할 수 있어 상사 보고용으로 바로 활용할 수 있습니다.
-              </p>
             </div>
           </div>
           </div>
