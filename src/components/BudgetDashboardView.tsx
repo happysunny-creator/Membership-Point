@@ -762,7 +762,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                       {/* Right: Metrics Grid */}
                       <div className="flex flex-wrap items-center gap-6 text-xs w-full lg:w-auto justify-between lg:justify-end">
                         {/* 배정 예산 */}
-                        <div className="text-right">
+                        <div className="w-32 text-right shrink-0">
                           <span className="text-slate-400 block text-[11px]">배정 예산 총액</span>
                           <span className="font-extrabold text-slate-900 text-sm">
                             {formatPoints(org.totalBudget)}
@@ -770,7 +770,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                         </div>
 
                         {/* 사용 실적 */}
-                        <div className="text-right">
+                        <div className="w-32 text-right shrink-0">
                           <span className="text-slate-400 block text-[11px]">사용 실적 합계</span>
                           <span className="font-extrabold text-blue-600 text-sm">
                             {formatPoints(org.totalUsed)}
@@ -778,7 +778,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                         </div>
 
                         {/* 잔여 포인트 */}
-                        <div className="text-right">
+                        <div className="w-32 text-right shrink-0">
                           <span className="text-slate-400 block text-[11px]">잔여 포인트</span>
                           <span className="font-extrabold text-emerald-600 text-sm">
                             {formatPoints(org.totalRemaining)}
