@@ -266,7 +266,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             <div className="font-semibold text-slate-800">{txn.description}</div>
                             <div className="text-[11px] text-slate-400">{txn.merchant}</div>
                           </td>
-                          <td className="py-2.5 px-4 text-right font-bold whitespace-nowrap">
+                          <td className="py-2.5 px-4 text-right font-extrabold whitespace-nowrap">
                             <span className={isSpend ? 'text-rose-600' : 'text-emerald-600'}>
                               {isSpend ? '-' : '+'} {formatPoints(txn.amount)}
                             </span>

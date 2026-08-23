@@ -355,7 +355,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   <span>금액 (배정 포인트) *</span>
                 </label>
                 {typeof budget === 'number' && budget > 0 && (
-                  <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                  <span className="text-xs font-extrabold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                     {formatPoints(budget)}
                   </span>
                 )}
@@ -580,13 +580,13 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {excelResult.rows.map(row => (
                         <tr key={row.index} className={row.isValid ? 'hover:bg-slate-50' : 'bg-rose-50/50'}>
-                          <td className="py-2 px-3 font-mono text-slate-400">{row.index}</td>
+                          <td className="py-2 px-3 font-mono font-extrabold text-slate-400">{row.index}</td>
                           <td className="py-2 px-3 font-medium text-slate-900">{row.company}</td>
                           <td className="py-2 px-3 text-slate-600">{row.department}</td>
                           <td className="py-2 px-3 font-bold text-slate-900">{row.name}</td>
                           <td className="py-2 px-3 text-slate-600">{row.position || '-'}</td>
                           <td className="py-2 px-3 text-slate-600">{row.manager || '운영관리팀'}</td>
-                          <td className="py-2 px-3 text-right font-bold text-slate-900">
+                          <td className="py-2 px-3 text-right font-extrabold text-slate-900">
                             {formatPoints(row.budget)}
                           </td>
                           <td className="py-2 px-3">

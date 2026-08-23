@@ -84,13 +84,13 @@ export const BudgetAdjustModal: React.FC<BudgetAdjustModalProps> = ({
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 grid grid-cols-2 gap-2 text-center">
             <div>
               <span className="text-[11px] text-slate-500">현재 총 배정 예산</span>
-              <div className="font-bold text-slate-900 text-sm mt-0.5">
+              <div className="font-extrabold text-slate-900 text-sm mt-0.5">
                 {formatPoints(customer.totalBudget)}
               </div>
             </div>
             <div>
               <span className="text-[11px] text-slate-500">현재 사용 실적</span>
-              <div className="font-bold text-blue-600 text-sm mt-0.5">
+              <div className="font-extrabold text-blue-600 text-sm mt-0.5">
                 {formatPoints(customer.usedPoints)}
               </div>
             </div>

@@ -158,11 +158,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       {currentCustomer.department}
                     </span>
                   </div>
-                  <span className="font-medium text-slate-500">배정: <span className="font-bold text-slate-900">{formatPoints(currentCustomer.totalBudget)}</span></span>
+                  <span className="font-medium text-slate-500">배정: <span className="font-extrabold text-slate-900">{formatPoints(currentCustomer.totalBudget)}</span></span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60">
-                  <span className="text-slate-500">현재 사용 실적: <span className="font-bold text-blue-600">{formatPoints(currentCustomer.usedPoints)}</span></span>
-                  <span className="font-bold text-emerald-600">가용 잔여: {formatPoints(currentCustomer.remainingPoints)}</span>
+                  <span className="text-slate-500">현재 사용 실적: <span className="font-extrabold text-blue-600">{formatPoints(currentCustomer.usedPoints)}</span></span>
+                  <span className="text-emerald-600">가용 잔여: <span className="font-extrabold">{formatPoints(currentCustomer.remainingPoints)}</span></span>
                 </div>
               </div>
             )}

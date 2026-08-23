@@ -443,7 +443,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                             key={row.index}
                             className={`hover:bg-slate-50/70 ${!row.isValid ? 'bg-rose-50/40' : ''}`}
                           >
-                            <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">
+                            <td className="py-2 px-3 text-center text-slate-400 font-mono font-extrabold text-[11px]">
                               {row.index}
                             </td>
                             {/* 조직명 */}
@@ -482,7 +482,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                               {row.merchant || '-'}
                             </td>
                             {/* 사용금액 */}
-                            <td className="py-2 px-3 text-right font-bold text-blue-600 whitespace-nowrap">
+                            <td className="py-2 px-3 text-right font-extrabold text-blue-600 whitespace-nowrap">
                               {formatPoints(row.amount)}
                             </td>
                             {/* 검증 */}

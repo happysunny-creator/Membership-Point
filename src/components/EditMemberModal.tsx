@@ -174,7 +174,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                   <span>배정포인트 (P) *</span>
                 </label>
                 {typeof totalBudget === 'number' && totalBudget > 0 && (
-                  <span className="text-[11px] font-bold text-slate-900">
+                  <span className="text-[11px] font-extrabold text-slate-900">
                     {formatPoints(totalBudget)}
                   </span>
                 )}

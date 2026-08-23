@@ -229,7 +229,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
           <div className="absolute flex flex-col items-center pointer-events-none">
             <span className="text-[11px] text-slate-400 font-medium">총 소진액</span>
-            <span className="text-xs font-bold text-slate-800">{formatNumber(totalOrgSpent)}</span>
+            <span className="text-xs font-extrabold text-slate-800">{formatNumber(totalOrgSpent)}</span>
           </div>
         </div>
 
@@ -243,14 +243,14 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
               <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                 <span className="truncate font-medium text-slate-800 text-xs" title={item.name}>{item.name}</span>
-                <span className="text-[10px] text-slate-400 shrink-0">({item.count}명)</span>
+                <span className="text-[10px] text-slate-400 font-extrabold shrink-0">({item.count}명)</span>
               </div>
               <div className="flex items-center gap-2 text-right shrink-0">
-                <span className="font-bold text-slate-900 text-xs">
+                <span className="font-extrabold text-slate-900 text-xs">
                   {formatPoints(item.value)}
                 </span>
                 <span
-                  className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 min-w-[48px] text-center"
+                  className="text-[11px] font-extrabold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 min-w-[48px] text-center"
                   title="조직 사용률 (사용실적 / 배정예산)"
                 >
                   {formatPercent(item.burnRate)}
@@ -323,7 +323,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
           <div className="absolute flex flex-col items-center pointer-events-none">
             <span className="text-[11px] text-slate-400 font-medium">사용처 합계</span>
-            <span className="text-xs font-bold text-slate-800">{formatNumber(totalMerchantSpend)}</span>
+            <span className="text-xs font-extrabold text-slate-800">{formatNumber(totalMerchantSpend)}</span>
           </div>
         </div>
 
@@ -339,10 +339,10 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                 <span className="truncate font-medium text-slate-800 text-xs" title={item.name}>{item.name}</span>
               </div>
               <div className="flex items-center gap-2 text-right shrink-0">
-                <span className="font-bold text-slate-900 text-xs">
+                <span className="font-extrabold text-slate-900 text-xs">
                   {formatPoints(item.value)}
                 </span>
-                <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 min-w-[48px] text-center">
+                <span className="text-[11px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 min-w-[48px] text-center">
                   {formatPercent(item.percent)}
                 </span>
               </div>
@@ -441,8 +441,8 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
         </div>
 
         <div className="pt-2 text-[11px] text-slate-500 border-t border-slate-100 flex items-center justify-between">
-          <span>당월({latestData?.month.split(' ')[0]}) 합계: <strong className="text-sky-700 font-mono font-bold">{formatPoints(latestData?.monthlySpend || 0)}</strong></span>
-          <span>총 누적 소진: <strong className="text-indigo-700 font-mono font-bold">{formatPoints(latestData?.cumulativeSpend || 0)}</strong></span>
+          <span>당월({latestData?.month.split(' ')[0]}) 합계: <strong className="text-sky-700 font-mono font-extrabold">{formatPoints(latestData?.monthlySpend || 0)}</strong></span>
+          <span>총 누적 소진: <strong className="text-indigo-700 font-mono font-extrabold">{formatPoints(latestData?.cumulativeSpend || 0)}</strong></span>
         </div>
       </div>
     </div>

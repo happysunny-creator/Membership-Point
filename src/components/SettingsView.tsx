@@ -619,7 +619,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className="w-2 h-2 rounded-full bg-rose-500"></span>
                     1단계 (빨간색)
                   </span>
-                  <span className="font-mono font-bold text-rose-700 text-xs">
+                  <span className="font-mono font-extrabold text-rose-700 text-xs">
                     0% ~ {stage1Max}%
                   </span>
                 </div>
@@ -638,7 +638,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                     2단계 (주황색)
                   </span>
-                  <span className="font-mono font-bold text-amber-700 text-xs">
+                  <span className="font-mono font-extrabold text-amber-700 text-xs">
                     {stage1Max}% ~ {stage2Max}%
                   </span>
                 </div>
@@ -657,7 +657,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     3단계 (초록색)
                   </span>
-                  <span className="font-mono font-bold text-emerald-700 text-xs">
+                  <span className="font-mono font-extrabold text-emerald-700 text-xs">
                     {stage2Max}% ~ {stage3Max}%
                   </span>
                 </div>
@@ -676,7 +676,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className="w-2 h-2 rounded-full bg-purple-600"></span>
                     4단계 (보라색)
                   </span>
-                  <span className="font-mono font-bold text-purple-700 text-xs">
+                  <span className="font-mono font-extrabold text-purple-700 text-xs">
                     {stage3Max}% ~ 100%
                   </span>
                 </div>
@@ -796,7 +796,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-extrabold flex items-center justify-center shrink-0">
                         {index + 1}
                       </span>
                       {isEditing ? (
@@ -907,15 +907,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="space-y-2.5 text-xs text-slate-600">
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">관리 대상 회원 수</span>
-                  <strong className="text-slate-900">{totalCustomers}명</strong>
+                  <strong className="text-slate-900 font-extrabold">{totalCustomers}명</strong>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">누적 포인트 거래 로그</span>
-                  <strong className="text-slate-900">{totalTransactions}건</strong>
+                  <strong className="text-slate-900 font-extrabold">{totalTransactions}건</strong>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">등록 조직 수</span>
-                  <strong className="text-slate-900">{uniqueCompanies.length}개</strong>
+                  <strong className="text-slate-900 font-extrabold">{uniqueCompanies.length}개</strong>
                 </div>
                 <div className="flex items-center justify-between py-1 gap-2">
                   <span className="text-slate-500 shrink-0">포인트 통화 단위</span>

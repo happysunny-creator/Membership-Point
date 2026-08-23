@@ -512,18 +512,18 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+              <div className="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">
                 {formatPoints(activeMetrics.totalBudget)}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5 text-slate-400" />
-                  <span>소속 <strong className="text-slate-700 font-semibold">{activeMetrics.customerCount}명</strong> 배정</span>
+                  <span>소속 <strong className="text-slate-700 font-extrabold">{activeMetrics.customerCount}명</strong> 배정</span>
                 </span>
                 {!selectedOrgData && (
                   <span className="flex items-center gap-1">
                     <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>총 <strong className="text-slate-700 font-semibold">{orgGroups.length}개</strong> 조직</span>
+                    <span>총 <strong className="text-slate-700 font-extrabold">{orgGroups.length}개</strong> 조직</span>
                   </span>
                 )}
               </div>
@@ -541,7 +541,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-black text-blue-600 tracking-tight font-mono">
+              <div className="text-2xl font-extrabold text-blue-600 tracking-tight font-mono">
                 {formatPoints(activeMetrics.totalUsed)}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
@@ -562,12 +562,12 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-black text-emerald-600 tracking-tight font-mono">
+              <div className="text-2xl font-extrabold text-emerald-600 tracking-tight font-mono">
                 {formatPoints(activeMetrics.totalRemaining)}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                 <span>잔여 비율</span>
-                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200">
+                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200">
                   {formatPercent(Math.max(100 - activeMetrics.burnRate, 0))}
                 </span>
               </div>
@@ -585,7 +585,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-black text-rose-600 tracking-tight font-mono">
+              <div className="text-2xl font-extrabold text-rose-600 tracking-tight font-mono">
                 {formatPercent(activeMetrics.burnRate)}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
@@ -610,7 +610,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <span>[{selectedOrgData.company}] 소속 회원별 상세 현황</span>
-                  <span className="px-2 py-0.2 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                  <span className="px-2 py-0.2 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800">
                     {filteredCustomers.length}명
                   </span>
                 </h3>
@@ -631,7 +631,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               >
                 <Layers className="w-4 h-4 text-indigo-600" />
                 <span>조직별 배정 및 사용 실적 현황</span>
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-50 text-indigo-800">
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-800">
                   {orgGroups.length}개
                 </span>
               </button>
@@ -646,7 +646,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               >
                 <Users className="w-4 h-4" />
                 <span>회원별 상세 예산 및 실적</span>
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-700">
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700">
                   {customers.length}명
                 </span>
               </button>
@@ -789,7 +789,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                         <div className="w-36">
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-[11px] text-slate-400">조직 사용률</span>
-                            <span className="text-[11px] font-bold text-rose-600">
+                            <span className="text-[11px] font-extrabold text-rose-600">
                               {formatPercent(org.burnRate)}
                             </span>
                           </div>
@@ -881,23 +881,23 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                                     </td>
 
                                     {/* 배정 예산 */}
-                                    <td className="py-2.5 px-3 text-right font-bold text-slate-900 font-mono">
+                                    <td className="py-2.5 px-3 text-right font-extrabold text-slate-900 font-mono">
                                       {formatPoints(cust.totalBudget)}
                                     </td>
 
                                     {/* 사용 실적 */}
-                                    <td className="py-2.5 px-3 text-right font-bold text-blue-600 font-mono">
+                                    <td className="py-2.5 px-3 text-right font-extrabold text-blue-600 font-mono">
                                       {formatPoints(cust.usedPoints)}
                                     </td>
 
                                     {/* 잔여 포인트 */}
-                                    <td className="py-2.5 px-3 text-right font-bold text-emerald-600 font-mono">
+                                    <td className="py-2.5 px-3 text-right font-extrabold text-emerald-600 font-mono">
                                       {formatPoints(cust.remainingPoints)}
                                     </td>
 
                                     {/* 사용률 */}
                                     <td className="py-2.5 px-3">
-                                      <span className="font-bold font-mono text-rose-600">{formatPercent(rate)}</span>
+                                      <span className="font-extrabold font-mono text-rose-600">{formatPercent(rate)}</span>
                                     </td>
 
                                     {/* 작업 버튼 */}
@@ -1045,28 +1045,28 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
 
                         {/* 4. Total Budget */}
                         <td className="py-3.5 px-3 text-right">
-                          <span className="font-bold text-slate-900 font-mono">
+                          <span className="font-extrabold text-slate-900 font-mono">
                             {formatPoints(customer.totalBudget)}
                           </span>
                         </td>
 
                         {/* 5. Used Points */}
                         <td className="py-3.5 px-3 text-right">
-                          <span className="font-bold text-blue-600 font-mono">
+                          <span className="font-extrabold text-blue-600 font-mono">
                             {formatPoints(customer.usedPoints)}
                           </span>
                         </td>
 
                         {/* 6. Remaining Points */}
                         <td className="py-3.5 px-3 text-right">
-                          <span className="font-bold text-emerald-600 font-mono">
+                          <span className="font-extrabold text-emerald-600 font-mono">
                             {formatPoints(customer.remainingPoints)}
                           </span>
                         </td>
 
                         {/* 7. Burn Rate (사용률 수치만 표기) */}
                         <td className="py-3.5 px-4">
-                          <span className="font-bold font-mono text-rose-600">
+                          <span className="font-extrabold font-mono text-rose-600">
                             {formatPercent(burnRate)}
                           </span>
                         </td>

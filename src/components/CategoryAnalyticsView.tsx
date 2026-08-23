@@ -255,8 +255,8 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
                       />
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                      <span>배정 예산: <span className="text-slate-900">{formatPoints(org.totalBudget)}</span></span>
-                      <span>잔여: <span className="text-emerald-600">{formatPoints(org.remainingPoints)}</span></span>
+                      <span>배정 예산: <span className="text-slate-900 font-extrabold">{formatPoints(org.totalBudget)}</span></span>
+                      <span>잔여: <span className="text-emerald-600 font-extrabold">{formatPoints(org.remainingPoints)}</span></span>
                     </div>
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
                       <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
                       결제 발생 건수
                     </span>
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-extrabold text-slate-800">
                       {org.txnCount}건
                     </span>
                   </div>

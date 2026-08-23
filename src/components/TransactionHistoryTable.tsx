@@ -110,7 +110,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              조회된 실적 합계: <span className="font-bold text-blue-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span>
+              조회된 실적 합계: <span className="font-extrabold text-blue-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span>
             </p>
           </div>
         </div>
@@ -275,7 +275,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 
                     {/* 7. 사용금액 */}
                     <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-                      <div className="font-bold text-sm text-blue-600 font-mono">
+                      <div className="font-extrabold text-sm text-blue-600 font-mono">
                         {formatPoints(txn.amount)}
                       </div>
                     </td>
@@ -311,8 +311,8 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
       {visibleTransactions.length > 0 && (
         <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-xs text-slate-500">
-            총 <strong className="text-slate-700 font-semibold">{visibleTransactions.length}</strong>건 중{' '}
-            <strong className="text-slate-700 font-semibold">
+            총 <strong className="text-slate-700 font-extrabold">{visibleTransactions.length}</strong>건 중{' '}
+            <strong className="text-slate-700 font-extrabold">
               {pageStart + 1}-{Math.min(pageStart + PAGE_SIZE, visibleTransactions.length)}
             </strong>
             번째 표시
@@ -340,7 +340,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                     key={page}
                     type="button"
                     onClick={() => setCurrentPage(page)}
-                    className={`min-w-[28px] h-7 px-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    className={`min-w-[28px] h-7 px-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer ${
                       page === safePage
                         ? 'bg-indigo-600 text-white shadow-xs'
                         : 'text-slate-600 hover:bg-slate-200'

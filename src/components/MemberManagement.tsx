@@ -233,7 +233,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
           </div>
           <div className="flex items-baseline justify-between mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-indigo-700 tracking-tight">{uniqueCompanies.length}</span>
+              <span className="text-2xl font-extrabold text-indigo-700 tracking-tight">{uniqueCompanies.length}</span>
               <span className="text-xs font-semibold text-slate-500">개 조직</span>
             </div>
             <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
@@ -252,7 +252,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
           </div>
           <div className="flex items-baseline justify-between mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-slate-900 tracking-tight">{formatNumber(totalMembers)}</span>
+              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{formatNumber(totalMembers)}</span>
               <span className="text-xs font-semibold text-slate-500">명</span>
             </div>
             <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
@@ -271,7 +271,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
           </div>
           <div className="flex items-baseline justify-between mt-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-purple-700 tracking-tight">{formatNumber(allocatedMembersCount)}</span>
+              <span className="text-2xl font-extrabold text-purple-700 tracking-tight">{formatNumber(allocatedMembersCount)}</span>
               <span className="text-xs font-semibold text-slate-500">명</span>
             </div>
             <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
@@ -289,7 +289,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+            <span className="text-2xl font-extrabold text-slate-900 tracking-tight font-mono">
               {formatPoints(totalAllocatedBudget)}
             </span>
             <span className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
@@ -406,7 +406,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
 
                   return (
                     <tr key={member.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 text-center text-slate-400 font-mono text-[11px]">
+                      <td className="py-3.5 px-4 text-center text-slate-400 font-mono font-extrabold text-[11px]">
                         {index + 1}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
@@ -437,7 +437,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                           <span className="text-slate-400">-</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-left font-mono font-bold text-slate-900 whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-left font-mono font-extrabold text-slate-900 whitespace-nowrap">
                         {formatPoints(member.totalBudget)}
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
@@ -549,15 +549,15 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-1.5 text-[11px]">
                 <div className="flex justify-between">
                   <span className="text-slate-500">현재 배정 예산</span>
-                  <span className="font-bold text-slate-900 font-mono">{formatPoints(pointOpMember.totalBudget)}</span>
+                  <span className="font-extrabold text-slate-900 font-mono">{formatPoints(pointOpMember.totalBudget)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">현재 사용 실적</span>
-                  <span className="font-bold text-blue-600 font-mono">{formatPoints(pointOpMember.usedPoints)}</span>
+                  <span className="font-extrabold text-blue-600 font-mono">{formatPoints(pointOpMember.usedPoints)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">현재 잔여 포인트</span>
-                  <span className="font-bold text-emerald-600 font-mono">{formatPoints(pointOpMember.remainingPoints)}</span>
+                  <span className="font-extrabold text-emerald-600 font-mono">{formatPoints(pointOpMember.remainingPoints)}</span>
                 </div>
               </div>
             )}
@@ -694,7 +694,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">배정 포인트</span>
-                <span className="font-mono font-bold text-slate-900">{formatPoints(deletingMember.totalBudget)}</span>
+                <span className="font-mono font-extrabold text-slate-900">{formatPoints(deletingMember.totalBudget)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">담당자</span>

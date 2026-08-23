@@ -103,13 +103,13 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                배정 예산: <strong className="text-slate-900">{formatPoints(orgTotals.totalBudget)}</strong>
+                배정 예산: <strong className="text-slate-900 font-extrabold">{formatPoints(orgTotals.totalBudget)}</strong>
                 <span className="mx-1.5">·</span>
-                사용 실적: <strong className="text-blue-600">{formatPoints(orgTotals.totalUsed)}</strong>
+                사용 실적: <strong className="text-blue-600 font-extrabold">{formatPoints(orgTotals.totalUsed)}</strong>
                 <span className="mx-1.5">·</span>
-                잔여: <strong className="text-emerald-600">{formatPoints(orgTotals.totalRemaining)}</strong>
+                잔여: <strong className="text-emerald-600 font-extrabold">{formatPoints(orgTotals.totalRemaining)}</strong>
                 <span className="mx-1.5">·</span>
-                사용률: <strong className="text-rose-600">{formatPercent(orgTotals.burnRate)}</strong>
+                사용률: <strong className="text-rose-600 font-extrabold">{formatPercent(orgTotals.burnRate)}</strong>
               </p>
             </div>
           </div>
@@ -214,13 +214,13 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                                 <span>{member.department || '-'}</span>
                               </div>
                             </td>
-                            <td className="py-2.5 px-4 text-right font-semibold text-slate-900">
+                            <td className="py-2.5 px-4 text-right font-extrabold text-slate-900">
                               {formatPoints(member.totalBudget)}
                             </td>
-                            <td className="py-2.5 px-4 text-right font-bold text-blue-600">
+                            <td className="py-2.5 px-4 text-right font-extrabold text-blue-600">
                               {formatPoints(member.usedPoints)}
                             </td>
-                            <td className="py-2.5 px-4 text-right font-bold text-emerald-600">
+                            <td className="py-2.5 px-4 text-right font-extrabold text-emerald-600">
                               {formatPoints(member.remainingPoints)}
                             </td>
                             <td className="py-2.5 px-4 text-center">
@@ -231,7 +231,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                                     style={{ width: `${Math.min(memberBurnRate, 100)}%` }}
                                   />
                                 </div>
-                                <span className="text-[11px] font-bold text-rose-600">
+                                <span className="text-[11px] font-extrabold text-rose-600">
                                   {formatPercent(memberBurnRate)}
                                 </span>
                               </div>
@@ -274,14 +274,14 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                 <div className="flex items-center gap-3 text-xs text-slate-500">
                   <span>
                     총 사용:{' '}
-                    <strong className="text-blue-600 font-bold">
+                    <strong className="text-blue-600 font-extrabold">
                       {formatPoints(activeCustomer.usedPoints)}
                     </strong>
                   </span>
                   <span>·</span>
                   <span>
                     잔여:{' '}
-                    <strong className="text-emerald-600 font-bold">
+                    <strong className="text-emerald-600 font-extrabold">
                       {formatPoints(activeCustomer.remainingPoints)}
                     </strong>
                   </span>
@@ -343,7 +343,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                             </td>
                             <td className="py-2.5 px-4 text-right whitespace-nowrap">
                               <span
-                                className={`font-bold ${
+                                className={`font-extrabold ${
                                   isSpend ? 'text-rose-600' : 'text-emerald-600'
                                 }`}
                               >
@@ -386,7 +386,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
             <strong className="text-slate-800 font-semibold">{orgName}</strong>
             <span className="mx-2">·</span>
             <span>총 소속 인원: </span>
-            <strong className="text-slate-800 font-semibold">{orgMembers.length}명</strong>
+            <strong className="text-slate-800 font-extrabold">{orgMembers.length}명</strong>
           </div>
           <button
             onClick={onClose}

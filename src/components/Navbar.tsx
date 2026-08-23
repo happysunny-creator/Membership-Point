@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Users className="w-4 h-4" />
             <span>회원 등록 및 포인트 배정</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold leading-none ${
+              className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold leading-none ${
                 activeTab === 'members' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-700'
               }`}
             >
@@ -96,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BarChart3 className="w-4 h-4" />
             <span>실적관리(상세)</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold leading-none ${
+              className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold leading-none ${
                 activeTab === 'performance' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-700'
               }`}
             >
