@@ -3,7 +3,6 @@ import { calculateBurnRate, formatPercent, formatPoints, sortByOrgPriority } fro
 import { separateNameAndPosition } from './nameParser';
 
 interface StatusReportParams {
-  companyName: string;
   customers: Customer[];
   settings: SystemSettings;
   summary: BudgetSummary;
@@ -20,7 +19,6 @@ function escapeHtml(value: string): string {
 // Builds a single self-contained HTML file (inline CSS, no external requests) so it can be
 // opened, emailed, or printed to PDF from any browser without the app or an internet connection.
 export function generateStatusReportHtml({
-  companyName,
   customers,
   settings,
   summary,
@@ -57,7 +55,6 @@ export function generateStatusReportHtml({
   const orgRows = orgList
     .map(org => {
       const rate = org.burnRate;
-      const rateColor = rate >= (settings.stage3MaxPercent ?? 70) ? '#7c3aed' : rate >= (settings.stage2MaxPercent ?? 50) ? '#059669' : rate >= (settings.stage1MaxPercent ?? 30) ? '#d97706' : '#e11d48';
       return `
         <tr>
           <td>${escapeHtml(org.company)}</td>
@@ -65,7 +62,7 @@ export function generateStatusReportHtml({
           <td class="num">${escapeHtml(formatPoints(org.totalBudget))}</td>
           <td class="num">${escapeHtml(formatPoints(org.totalUsed))}</td>
           <td class="num">${escapeHtml(formatPoints(org.totalRemaining))}</td>
-          <td class="num" style="color:${rateColor};font-weight:700;">${escapeHtml(formatPercent(rate))}</td>
+          <td class="num">${escapeHtml(formatPercent(rate))}</td>
         </tr>`;
     })
     .join('');
@@ -75,7 +72,6 @@ export function generateStatusReportHtml({
       org.customers.map(cust => {
         const { name: cleanName, position: cleanPosition } = separateNameAndPosition(cust.name, cust.position);
         const rate = calculateBurnRate(cust.usedPoints, cust.totalBudget);
-        const rateColor = rate >= (settings.stage3MaxPercent ?? 70) ? '#7c3aed' : rate >= (settings.stage2MaxPercent ?? 50) ? '#059669' : rate >= (settings.stage1MaxPercent ?? 30) ? '#d97706' : '#e11d48';
         return `
         <tr>
           <td>${escapeHtml(org.company)}</td>
@@ -85,7 +81,7 @@ export function generateStatusReportHtml({
           <td class="num">${escapeHtml(formatPoints(cust.totalBudget))}</td>
           <td class="num">${escapeHtml(formatPoints(cust.usedPoints))}</td>
           <td class="num">${escapeHtml(formatPoints(cust.remainingPoints))}</td>
-          <td class="num" style="color:${rateColor};font-weight:700;">${escapeHtml(formatPercent(rate))}</td>
+          <td class="num">${escapeHtml(formatPercent(rate))}</td>
         </tr>`;
       })
     )
@@ -277,7 +273,7 @@ export function generateStatusReportHtml({
     </section>
 
     <div class="footer">
-      <span>${escapeHtml(companyName)} 멤버십 포인트 관리 Dashboard</span>
+      <span>남산 리더십센터 / 스마일즈 멤버십 포인트 관리 Dashboard</span>
       <span>본 문서는 ${escapeHtml(generatedAt)} 기준 시스템 데이터를 바탕으로 자동 생성되었습니다.</span>
     </div>
   </div>

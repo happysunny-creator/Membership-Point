@@ -518,7 +518,6 @@ export default function App() {
   // Export a self-contained HTML status report (조직별 현황 + 최근 실적) for sharing with management
   const handleExportHtmlReport = () => {
     downloadStatusReportHtml({
-      companyName: settings.companyName || '멤버십 포인트 관리',
       customers,
       settings,
       summary,
