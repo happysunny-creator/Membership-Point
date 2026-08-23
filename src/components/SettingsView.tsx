@@ -1116,13 +1116,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               type="button"
               onClick={onExportPdfReport}
-              className="p-4 bg-rose-600 hover:bg-rose-700 border border-rose-600 rounded-xl text-xs font-bold text-white flex items-center justify-between transition-colors shadow-xs cursor-pointer"
+              className="p-4 bg-slate-700 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white flex items-center justify-between transition-colors shadow-xs cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <FileDown className="w-4 h-4" />
                 <span>PDF 파일로 송출하기</span>
               </div>
-              <span className="text-[11px] text-rose-200">.pdf</span>
+              <span className="text-[11px] text-slate-300">.pdf</span>
             </button>
           </div>
 

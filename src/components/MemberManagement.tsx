@@ -427,15 +427,11 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                           <span>{displayName}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
-                        {displayPosition ? (
-                          <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium text-[11px]">
-                            <Briefcase className="w-3 h-3 text-slate-400" />
-                            {displayPosition}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
+                      <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{displayPosition || '-'}</span>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-left font-mono font-extrabold text-slate-900 whitespace-nowrap">
                         {formatPoints(member.totalBudget)}

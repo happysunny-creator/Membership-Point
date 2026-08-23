@@ -5,16 +5,9 @@ import { separateNameAndPosition } from '../utils/nameParser';
 import { EditTransactionModal } from './EditTransactionModal';
 import {
   History,
-  Store,
-  Calendar,
   Edit2,
   Trash2,
   AlertTriangle,
-  Layers,
-  Network,
-  User,
-  Briefcase,
-  Wallet,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -143,48 +136,13 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100/80 text-slate-700 border-b border-slate-200 font-bold select-none text-[12px]">
-              <th className="py-3 px-4 sm:px-6 text-left">
-                <div className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>조직명</span>
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left">
-                <div className="flex items-center gap-1.5">
-                  <Network className="w-3.5 h-3.5 text-cyan-600" />
-                  <span>소속 부서</span>
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left">
-                <div className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-slate-500" />
-                  <span>성함</span>
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left">
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                  <span>직위</span>
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  <span>사용일시</span>
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left">
-                <div className="flex items-center gap-1.5">
-                  <Store className="w-3.5 h-3.5 text-slate-400" />
-                  <span>사용처</span>
-                </div>
-              </th>
-              <th className="py-3 px-4 sm:px-6 text-right">
-                <div className="flex items-center justify-end gap-1.5">
-                  <Wallet className="w-3.5 h-3.5 text-rose-500" />
-                  <span>사용금액</span>
-                </div>
-              </th>
+              <th className="py-3 px-4 sm:px-6 text-left">조직명</th>
+              <th className="py-3 px-4 text-left">소속 부서</th>
+              <th className="py-3 px-4 text-left">성함</th>
+              <th className="py-3 px-4 text-left">직위</th>
+              <th className="py-3 px-4 text-left">사용일시</th>
+              <th className="py-3 px-4 text-left">사용처</th>
+              <th className="py-3 px-4 sm:px-6 text-right">사용금액</th>
               <th className="py-3 px-4 text-center">관리</th>
             </tr>
           </thead>
@@ -221,18 +179,12 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                   <tr key={txn.id} className="hover:bg-blue-50/30 transition-colors">
                     {/* 1. 조직명 */}
                     <td className="py-3.5 px-4 sm:px-6 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                        <span className="font-bold text-slate-900">{company}</span>
-                      </div>
+                      <span className="font-bold text-slate-900">{company}</span>
                     </td>
 
                     {/* 2. 소속 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
-                        <Network className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                        <span className="text-slate-600 font-medium">{department}</span>
-                      </div>
+                      <span className="text-slate-600 font-medium">{department}</span>
                     </td>
 
                     {/* 3. 성함 */}
@@ -252,18 +204,12 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 
                     {/* 5. 사용날짜 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1.5 text-slate-700 font-mono text-[11px]">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{usageDate}</span>
-                      </div>
+                      <span className="text-slate-700 font-mono text-[11px]">{usageDate}</span>
                     </td>
 
                     {/* 6. 사용처 */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 font-medium text-slate-800">
-                        <Store className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        <span className="truncate max-w-[220px]" title={merchant}>{merchant}</span>
-                      </div>
+                      <span className="font-medium text-slate-800 truncate max-w-[220px] block" title={merchant}>{merchant}</span>
                     </td>
 
                     {/* 7. 사용금액 */}
