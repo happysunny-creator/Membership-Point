@@ -1,13 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Category,
   CategoryId,
   Customer,
-  CustomerStatus,
-  CustomerTier,
   FilterState,
   Transaction,
-  TransactionType,
   BudgetSummary,
   MainTab,
   SystemSettings,
@@ -16,10 +12,8 @@ import { CATEGORIES, INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS } from './data/mock
 import { calculateBurnRate, exportToCSV, formatPoints, getCustomerStatusFromBurnRate, setCurrencyUnit } from './utils/formatters';
 
 import { Navbar } from './components/Navbar';
-import { StatSummaryCards } from './components/StatSummaryCards';
 import { BudgetDashboardView } from './components/BudgetDashboardView';
 import { ChartsSection } from './components/ChartsSection';
-import { CustomerTable } from './components/CustomerTable';
 import { TransactionHistoryTable } from './components/TransactionHistoryTable';
 import { CustomerDetailModal } from './components/CustomerDetailModal';
 import { AddTransactionModal } from './components/AddTransactionModal';
@@ -154,92 +148,6 @@ export default function App() {
     };
   }, [customers, settings]);
 
-  // 6. Filter and Sort Customers
-  const filteredCustomers = useMemo(() => {
-    const stage1Max = settings.stage1MaxPercent ?? 30;
-    const stage2Max = settings.stage2MaxPercent ?? 50;
-    const stage3Max = settings.stage3MaxPercent ?? 70;
-
-    return customers.filter(c => {
-      // Search query
-      if (filterState.searchQuery) {
-        const query = filterState.searchQuery.toLowerCase();
-        const matchName = c.name.toLowerCase().includes(query);
-        const matchCompany = c.company.toLowerCase().includes(query);
-        const matchDept = c.department.toLowerCase().includes(query);
-        const matchEmail = c.email.toLowerCase().includes(query);
-        if (!matchName && !matchCompany && !matchDept && !matchEmail) return false;
-      }
-
-      // Tier filter
-      if (filterState.selectedTier !== 'all' && c.tier !== filterState.selectedTier) {
-        return false;
-      }
-
-      // Status filter
-      if (filterState.selectedStatus !== 'all') {
-        const burnRate = calculateBurnRate(c.usedPoints, c.totalBudget);
-        const computedStatus = getCustomerStatusFromBurnRate(burnRate, settings);
-
-        if (filterState.selectedStatus === 'STAGE_0_30' || filterState.selectedStatus === 'WARNING') {
-          if (burnRate >= stage1Max) return false;
-        } else if (filterState.selectedStatus === 'STAGE_30_50') {
-          if (burnRate < stage1Max || burnRate >= stage2Max) return false;
-        } else if (filterState.selectedStatus === 'STAGE_50_70' || filterState.selectedStatus === 'ACTIVE') {
-          if (burnRate < stage2Max || burnRate >= stage3Max) return false;
-        } else if (
-          filterState.selectedStatus === 'STAGE_70_PLUS' ||
-          filterState.selectedStatus === 'OVER_BUDGET' ||
-          filterState.selectedStatus === 'PERFECT'
-        ) {
-          if (burnRate < stage3Max) return false;
-        } else if (c.status !== filterState.selectedStatus && computedStatus !== filterState.selectedStatus) {
-          return false;
-        }
-      }
-
-      // Customer selection
-      if (filterState.selectedCustomer !== 'all' && c.id !== filterState.selectedCustomer) {
-        return false;
-      }
-
-      // If a specific category filter is active, check if this customer has transactions in that category
-      if (filterState.selectedCategory !== 'all') {
-        const hasCategoryTxn = transactions.some(
-          t => t.customerId === c.id && t.categoryId === filterState.selectedCategory
-        );
-        if (!hasCategoryTxn) return false;
-      }
-
-      return true;
-    }).sort((a, b) => {
-      let comparison = 0;
-      switch (filterState.sortBy) {
-        case 'budget':
-          comparison = a.totalBudget - b.totalBudget;
-          break;
-        case 'used':
-          comparison = a.usedPoints - b.usedPoints;
-          break;
-        case 'remaining':
-          comparison = a.remainingPoints - b.remainingPoints;
-          break;
-        case 'burnRate': {
-          const rateA = calculateBurnRate(a.usedPoints, a.totalBudget);
-          const rateB = calculateBurnRate(b.usedPoints, b.totalBudget);
-          comparison = rateA - rateB;
-          break;
-        }
-        case 'name':
-          comparison = a.name.localeCompare(b.name, 'ko');
-          break;
-        default:
-          comparison = 0;
-      }
-      return filterState.sortOrder === 'desc' ? -comparison : comparison;
-    });
-  }, [customers, transactions, filterState]);
-
   // 7. Filter and Sort Transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter(txn => {
@@ -294,10 +202,6 @@ export default function App() {
     setFilterState(prev => ({ ...prev, selectedCategory: categoryId }));
   };
 
-  const handleFilterUpdate = (updates: Partial<FilterState>) => {
-    setFilterState(prev => ({ ...prev, ...updates }));
-  };
-
   const handleResetFilters = () => {
     setFilterState({
       searchQuery: '',
@@ -310,14 +214,6 @@ export default function App() {
       sortBy: 'burnRate',
       sortOrder: 'desc',
     });
-  };
-
-  const handleSortChange = (field: FilterState['sortBy']) => {
-    setFilterState(prev => ({
-      ...prev,
-      sortBy: field,
-      sortOrder: prev.sortBy === field && prev.sortOrder === 'desc' ? 'asc' : 'desc',
-    }));
   };
 
   // Add Transaction Handler
@@ -661,12 +557,6 @@ export default function App() {
 
       {/* Top Navigation Bar */}
       <Navbar
-        onOpenAddTransaction={() => {
-          setTargetCustomerForModal(null);
-          setIsAddTransactionOpen(true);
-        }}
-        onOpenExcelUpload={() => setIsExcelUploadOpen(true)}
-        onResetData={handleResetData}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         totalCustomersCount={customers.length}
@@ -760,12 +650,8 @@ export default function App() {
 
             {/* Visual Charts Overview */}
             <ChartsSection
-              categories={CATEGORIES}
               customers={customers}
               transactions={transactions}
-              selectedCategory={filterState.selectedCategory}
-              onSelectCategory={handleCategoryChange}
-              categorySpendingMap={categorySpendingMap}
             />
 
             {/* Organization Analytics Grid (조직별 포인트 사용 실적) */}
@@ -786,13 +672,11 @@ export default function App() {
             {/* Real-time Transactions & Logs Table */}
             <TransactionHistoryTable
               transactions={filteredTransactions}
-              categories={CATEGORIES}
               customers={customers}
               onSelectCustomerByName={name => {
                 const matched = customers.find(c => c.name === name);
                 if (matched) setSelectedCustomer(matched);
               }}
-              onFilterByCategory={catId => handleCategoryChange(catId as CategoryId)}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
             />
@@ -812,7 +696,6 @@ export default function App() {
             onAddCustomer={handleSaveCustomer}
             onBatchAddCustomers={handleSaveBatchCustomers}
             onUpdateCustomer={handleUpdateCustomer}
-            onDeleteCustomer={handleDeleteCustomer}
             onOpenExcelUpload={() => setIsExcelUploadOpen(true)}
             onResetData={handleResetData}
             onExportCSV={handleExportCSV}
@@ -872,7 +755,6 @@ export default function App() {
         isOpen={isExcelUploadOpen}
         onClose={() => setIsExcelUploadOpen(false)}
         existingCustomers={customers}
-        categories={CATEGORIES}
         onImportComplete={handleExcelImport}
       />
     </div>

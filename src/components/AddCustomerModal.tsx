@@ -9,7 +9,6 @@ import {
   FileText,
   UserPlus,
   X,
-  Briefcase,
   BadgeCheck,
   FileSpreadsheet,
   Download,

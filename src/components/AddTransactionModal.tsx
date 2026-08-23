@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Customer, Transaction } from '../types';
 import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
-import { X, PlusCircle, AlertCircle, Layers, Network, User } from 'lucide-react';
+import { X, PlusCircle, AlertCircle, Layers, Network } from 'lucide-react';
 
 interface AddTransactionModalProps {
   isOpen: boolean;

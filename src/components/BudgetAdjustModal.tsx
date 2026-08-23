@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Customer } from '../types';
 import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
-import { Settings, X, Plus, Minus, Layers, Network } from 'lucide-react';
+import { Settings, X, Layers, Network } from 'lucide-react';
 
 interface BudgetAdjustModalProps {
   customer: Customer | null;
@@ -17,16 +17,9 @@ export const BudgetAdjustModal: React.FC<BudgetAdjustModalProps> = ({
   onClose,
   onAdjustBudget,
 }) => {
-  const [budgetAmount, setBudgetAmount] = useState<number>(0);
   const [adjustmentMode, setAdjustmentMode] = useState<'ADD' | 'SET'>('ADD');
   const [amountValue, setAmountValue] = useState<number | ''>(1000000);
   const [reason, setReason] = useState<string>('분기별 복지 포인트 정기 증액');
-
-  useEffect(() => {
-    if (customer) {
-      setBudgetAmount(customer.totalBudget);
-    }
-  }, [customer]);
 
   if (!isOpen || !customer) return null;
 

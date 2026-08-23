@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, Transaction, TransactionStatus } from '../types';
-import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
 import { X, Edit3, Save, Calendar, Store, User, DollarSign, Layers, Network, Briefcase } from 'lucide-react';
 

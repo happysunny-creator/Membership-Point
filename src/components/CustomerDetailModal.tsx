@@ -11,13 +11,9 @@ import {
 import { separateNameAndPosition } from '../utils/nameParser';
 import {
   X,
-  User,
-  Building,
   Layers,
   Network,
   UserCheck,
-  Mail,
-  Phone,
   Calendar,
   Wallet,
   PieChart,

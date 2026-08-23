@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Category, CategoryId, Customer, SystemSettings, Transaction } from '../types';
-import { formatPoints, formatNumber, formatPercent, sortByOrgPriority } from '../utils/formatters';
+import { formatPoints, formatPercent, sortByOrgPriority } from '../utils/formatters';
 import {
   Layers,
   Network,
@@ -29,7 +29,6 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
   settings,
   onSelectCustomer,
 }) => {
-  const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>('all');
   const [selectedOrgForModal, setSelectedOrgForModal] = useState<string | null>(null);
 
   // 1. Group Customers & Transactions by Organization (Company)
@@ -143,10 +142,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
     };
   }, [customers, transactions, settings]);
 
-  const filteredOrgs = useMemo(() => {
-    if (selectedOrgFilter === 'all') return orgAnalytics.orgs;
-    return orgAnalytics.orgs.filter(o => o.company === selectedOrgFilter);
-  }, [orgAnalytics.orgs, selectedOrgFilter]);
+  const filteredOrgs = orgAnalytics.orgs;
 
   return (
     <div className="space-y-6" id="category-analytics-view">

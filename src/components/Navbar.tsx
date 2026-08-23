@@ -1,21 +1,14 @@
 import React from 'react';
 import {
   Coins,
-  PlusCircle,
-  RotateCcw,
-  UserPlus,
   BarChart3,
   WalletCards,
   Settings,
-  FileSpreadsheet,
   Users,
 } from 'lucide-react';
 import { MainTab } from '../types';
 
 interface NavbarProps {
-  onOpenAddTransaction: () => void;
-  onOpenExcelUpload: () => void;
-  onResetData: () => void;
   activeTab: MainTab;
   setActiveTab: (tab: MainTab) => void;
   totalCustomersCount: number;
@@ -23,9 +16,6 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  onOpenAddTransaction,
-  onOpenExcelUpload,
-  onResetData,
   activeTab,
   setActiveTab,
   totalCustomersCount,

@@ -1,19 +1,15 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Customer, CustomerStatus, BudgetSummary, SystemSettings } from '../types';
+import { Customer, BudgetSummary, SystemSettings } from '../types';
 import {
   Layers,
   Network,
-  Building2,
   Users,
   Wallet,
   PieChart as PieIcon,
   CheckCircle2,
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
-  ChevronLeft,
-  ChevronRight,
   Search,
   PlusCircle,
   Settings,
@@ -21,14 +17,7 @@ import {
   ArrowUpDown,
   Filter,
   TrendingUp,
-  Briefcase,
-  UserCheck,
   User,
-  Folder,
-  FolderOpen,
-  FolderTree,
-  LayoutGrid,
-  ListTree,
   X,
   Download,
 } from 'lucide-react';

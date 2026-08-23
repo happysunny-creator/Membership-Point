@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Customer, SystemSettings } from '../types';
-import { formatPoints, formatNumber } from '../utils/formatters';
 import { downloadExcelTemplate, parseOrgNameExcelFile, downloadOrgNameExcelTemplate, downloadCustomerExcelTemplate } from '../utils/excelParser';
 import { AddCustomerModal } from './AddCustomerModal';
 import {
@@ -10,13 +9,11 @@ import {
   Download,
   UploadCloud,
   RotateCcw,
-  Network,
   CheckCircle2,
   Save,
   Layers,
   Gauge,
   AlertTriangle,
-  HelpCircle,
   TrendingUp,
   ArrowUp,
   ArrowDown,
@@ -34,7 +31,6 @@ interface SettingsViewProps {
   onAddCustomer: (newCustomer: Customer) => void;
   onBatchAddCustomers: (newCustomers: Customer[]) => void;
   onUpdateCustomer: (updatedCustomer: Customer) => void;
-  onDeleteCustomer: (customerId: string) => void;
   onOpenExcelUpload: () => void;
   onResetData: () => void;
   onExportCSV: () => void;
@@ -49,7 +45,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onAddCustomer,
   onBatchAddCustomers,
   onUpdateCustomer,
-  onDeleteCustomer,
   onOpenExcelUpload,
   onResetData,
   onExportCSV,

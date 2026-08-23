@@ -8,31 +8,22 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  AreaChart,
   Area,
   Line,
   ComposedChart,
 } from 'recharts';
-import { Category, CategoryId, Customer, Transaction } from '../types';
+import { Customer, Transaction } from '../types';
 import { formatNumber, formatPoints, formatPercent } from '../utils/formatters';
 import { Layers, Store, TrendingUp } from 'lucide-react';
 
 interface ChartsSectionProps {
-  categories: Category[];
   customers: Customer[];
   transactions: Transaction[];
-  selectedCategory: CategoryId | 'all';
-  onSelectCategory: (catId: CategoryId | 'all') => void;
-  categorySpendingMap: Record<CategoryId, number>;
 }
 
 export const ChartsSection: React.FC<ChartsSectionProps> = ({
-  categories,
   customers,
   transactions,
-  selectedCategory,
-  onSelectCategory,
-  categorySpendingMap,
 }) => {
   // 1. Prepare Organization (조직별) Spending & Ratio Pie Chart Data
   const { orgPieData, totalOrgSpent, uniqueOrgCount } = useMemo(() => {

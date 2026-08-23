@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Customer } from '../types';
 import { formatPoints, formatNumber } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
@@ -158,7 +158,6 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   // Summary Metrics
   const totalMembers = customers.length;
   const totalAllocatedBudget = customers.reduce((sum, c) => sum + (c.totalBudget || 0), 0);
-  const managerAssignedCount = customers.filter(c => c.manager && c.manager.trim() !== '').length;
   const allocatedMembersCount = customers.filter(c => (c.totalBudget || 0) >= 10000).length;
 
   return (

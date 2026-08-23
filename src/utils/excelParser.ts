@@ -1,7 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Category, CategoryId, Customer, CustomerStatus, Transaction, TransactionType } from '../types';
-import { CATEGORIES } from '../data/mockData';
-import { calculateBurnRate } from './formatters';
+import { CategoryId, Customer, TransactionType } from '../types';
 import { separateNameAndPosition } from './nameParser';
 
 export interface ParsedExcelRow {

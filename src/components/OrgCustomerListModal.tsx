@@ -5,8 +5,6 @@ import {
   formatPercent,
   calculateBurnRate,
   getBurnRateColorClass,
-  getStatusBadge,
-  getTierBadgeStyle,
 } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
 import {
@@ -14,13 +12,8 @@ import {
   Users,
   Layers,
   Network,
-  Wallet,
-  PieChart,
   History,
-  TrendingUp,
   Search,
-  CheckCircle2,
-  Calendar,
 } from 'lucide-react';
 
 interface OrgCustomerListModalProps {

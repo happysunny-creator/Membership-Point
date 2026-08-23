@@ -1,20 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { Customer, Transaction } from '../types';
 import {
-  Category,
-  CategoryId,
-  Customer,
-  CustomerStatus,
-  CustomerTier,
-  Transaction,
-} from '../types';
-import {
-  ParsedExcelRow,
   ExcelImportResult,
   parseExcelFile,
   downloadExcelTemplate,
 } from '../utils/excelParser';
-import { formatPoints, formatNumber } from '../utils/formatters';
-import { getCategoryIcon } from './CategoryFilterBar';
+import { formatPoints } from '../utils/formatters';
 import {
   FileSpreadsheet,
   UploadCloud,
@@ -23,12 +14,10 @@ import {
   AlertTriangle,
   X,
   FileText,
-  Users,
   Layers,
   Network,
   User,
   Briefcase,
-  ArrowRight,
   RefreshCw,
 } from 'lucide-react';
 
@@ -36,7 +25,6 @@ interface ExcelUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   existingCustomers: Customer[];
-  categories: Category[];
   onImportComplete: (
     importedTransactions: Transaction[],
     newCustomers: Customer[],
@@ -48,7 +36,6 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
   isOpen,
   onClose,
   existingCustomers,
-  categories,
   onImportComplete,
 }) => {
   const [isDragging, setIsDragging] = useState<boolean>(false);

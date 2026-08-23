@@ -1,22 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Category, Customer, Transaction } from '../types';
-import { formatPoints, getTransactionTypeBadge } from '../utils/formatters';
+import { Customer, Transaction } from '../types';
+import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
-import { getCategoryIcon } from './CategoryFilterBar';
 import { EditTransactionModal } from './EditTransactionModal';
 import {
   History,
   Store,
   Calendar,
-  CheckCircle2,
-  Clock,
-  Ban,
-  ArrowUpRight,
-  ArrowDownLeft,
   Edit2,
   Trash2,
   AlertTriangle,
-  X,
   Layers,
   Network,
   User,
@@ -45,20 +38,16 @@ function getPageNumbers(current: number, total: number): (number | 'ellipsis')[]
 
 interface TransactionHistoryTableProps {
   transactions: Transaction[];
-  categories: Category[];
   customers?: Customer[];
   onSelectCustomerByName?: (customerName: string) => void;
-  onFilterByCategory?: (categoryId: string) => void;
   onEditTransaction?: (updatedTxn: Transaction) => void;
   onDeleteTransaction?: (txnId: string) => void;
 }
 
 export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = ({
   transactions,
-  categories,
   customers = [],
   onSelectCustomerByName,
-  onFilterByCategory,
   onEditTransaction,
   onDeleteTransaction,
 }) => {
@@ -70,10 +59,6 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
   useEffect(() => {
     setCurrentPage(1);
   }, [transactions]);
-
-  const getCategoryMeta = (catId: string) => {
-    return categories.find(c => c.id === catId);
-  };
 
   const totalFilteredAmount = transactions.reduce(
     (sum, t) => sum + (t.type === 'SPEND' ? t.amount : -t.amount),
