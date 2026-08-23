@@ -425,10 +425,10 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                   }`}
                 >
                   <option value="all">전체 단계 (0% ~ 100%)</option>
-                  <option value="stage1">1단계: 0% ~ {settings?.stage1MaxPercent ?? 30}% (빨간색)</option>
-                  <option value="stage2">2단계: {settings?.stage1MaxPercent ?? 30}% ~ {settings?.stage2MaxPercent ?? 50}% (주황색)</option>
-                  <option value="stage3">3단계: {settings?.stage2MaxPercent ?? 50}% ~ {settings?.stage3MaxPercent ?? 70}% (초록색)</option>
-                  <option value="stage4">4단계: {settings?.stage3MaxPercent ?? 70}% 이상 (보라색)</option>
+                  <option value="stage1">1단계: 0% ~ {settings?.stage1MaxPercent ?? 30}%</option>
+                  <option value="stage2">2단계: {settings?.stage1MaxPercent ?? 30}% ~ {settings?.stage2MaxPercent ?? 50}%</option>
+                  <option value="stage3">3단계: {settings?.stage2MaxPercent ?? 50}% ~ {settings?.stage3MaxPercent ?? 70}%</option>
+                  <option value="stage4">4단계: {settings?.stage3MaxPercent ?? 70}% 이상</option>
                 </select>
                 <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>

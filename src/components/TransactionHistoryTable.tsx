@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Customer, Transaction } from '../types';
 import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
@@ -17,6 +17,8 @@ import {
   Wallet,
   ChevronLeft,
   ChevronRight,
+  Search,
+  X,
 } from 'lucide-react';
 
 const PAGE_SIZE = 30;
@@ -54,21 +56,36 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
   const [editingTxn, setEditingTxn] = useState<Transaction | null>(null);
   const [deletingTxn, setDeletingTxn] = useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [nameSearchQuery, setNameSearchQuery] = useState('');
 
-  // Filters/search change the transactions list identity — always land back on page 1
+  // Quickly find a member's records by name — searches the cleaned display name
+  const visibleTransactions = useMemo(() => {
+    const q = nameSearchQuery.trim().toLowerCase();
+    if (!q) return transactions;
+    return transactions.filter(t => {
+      const matchedCust = customers.find(c => c.id === t.customerId || c.name === t.customerName);
+      const { name } = separateNameAndPosition(
+        t.customerName || matchedCust?.name || '',
+        t.customerPosition || matchedCust?.position || ''
+      );
+      return name.toLowerCase().includes(q);
+    });
+  }, [transactions, customers, nameSearchQuery]);
+
+  // Filters/search change the visible list identity — always land back on page 1
   useEffect(() => {
     setCurrentPage(1);
-  }, [transactions]);
+  }, [transactions, nameSearchQuery]);
 
-  const totalFilteredAmount = transactions.reduce(
+  const totalFilteredAmount = visibleTransactions.reduce(
     (sum, t) => sum + (t.type === 'SPEND' ? t.amount : -t.amount),
     0
   );
 
-  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(visibleTransactions.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const pageStart = (safePage - 1) * PAGE_SIZE;
-  const paginatedTransactions = transactions.slice(pageStart, pageStart + PAGE_SIZE);
+  const paginatedTransactions = visibleTransactions.slice(pageStart, pageStart + PAGE_SIZE);
 
   const handleConfirmDelete = () => {
     if (deletingTxn && onDeleteTransaction) {
@@ -89,13 +106,35 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
             <div className="flex items-center gap-2">
               <h3 className="text-sm sm:text-base font-black text-slate-900">포인트 사용 및 실적 내역</h3>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                총 {transactions.length}건
+                총 {visibleTransactions.length}건
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               조회된 실적 합계: <span className="font-bold text-blue-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span>
             </p>
           </div>
+        </div>
+
+        {/* Quick search by member name */}
+        <div className="relative w-full md:w-64 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={nameSearchQuery}
+            onChange={e => setNameSearchQuery(e.target.value)}
+            placeholder="회원명으로 검색..."
+            className="w-full pl-8 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          />
+          {nameSearchQuery && (
+            <button
+              type="button"
+              onClick={() => setNameSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 cursor-pointer"
+              title="검색어 지우기"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -150,7 +189,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
-            {transactions.length === 0 ? (
+            {visibleTransactions.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center space-y-2">
@@ -269,12 +308,12 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
       </div>
 
       {/* Pagination */}
-      {transactions.length > 0 && (
+      {visibleTransactions.length > 0 && (
         <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-xs text-slate-500">
-            총 <strong className="text-slate-700 font-semibold">{transactions.length}</strong>건 중{' '}
+            총 <strong className="text-slate-700 font-semibold">{visibleTransactions.length}</strong>건 중{' '}
             <strong className="text-slate-700 font-semibold">
-              {pageStart + 1}-{Math.min(pageStart + PAGE_SIZE, transactions.length)}
+              {pageStart + 1}-{Math.min(pageStart + PAGE_SIZE, visibleTransactions.length)}
             </strong>
             번째 표시
           </span>
