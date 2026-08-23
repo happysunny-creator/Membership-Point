@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Category, CategoryId, Customer, Transaction, TransactionType } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Customer, Transaction } from '../types';
 import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
-import { getCategoryIcon } from './CategoryFilterBar';
 import { X, PlusCircle, AlertCircle, Layers, Network, User } from 'lucide-react';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   customers: Customer[];
-  categories: Category[];
   targetCustomer?: Customer | null;
   onSaveTransaction: (transaction: Omit<Transaction, 'id'>) => void;
 }
@@ -18,21 +16,31 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
   onClose,
   customers,
-  categories,
   targetCustomer,
   onSaveTransaction,
 }) => {
+  const [orgFilter, setOrgFilter] = useState<string>('all');
   const [customerId, setCustomerId] = useState<string>('');
-  const [type, setType] = useState<TransactionType>('SPEND');
-  const [categoryId, setCategoryId] = useState<CategoryId>('shopping');
   const [amount, setAmount] = useState<number | ''>('');
-  const [merchant, setMerchant] = useState<string>('');
+  const [merchant, setMerchant] = useState<string>('남산리더십센터');
   const [description, setDescription] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('포인트 즉시 결제');
+
+  const uniqueOrgs = useMemo(() => {
+    const orgs = new Set<string>();
+    customers.forEach(c => {
+      if (c.company) orgs.add(c.company);
+    });
+    return Array.from(orgs).sort((a, b) => a.localeCompare(b, 'ko'));
+  }, [customers]);
+
+  const orgFilteredCustomers = useMemo(() => {
+    return orgFilter === 'all' ? customers : customers.filter(c => c.company === orgFilter);
+  }, [customers, orgFilter]);
 
   useEffect(() => {
     if (targetCustomer) {
       setCustomerId(targetCustomer.id);
+      setOrgFilter(targetCustomer.company);
     } else if (customers.length > 0 && !customerId) {
       setCustomerId(customers[0].id);
     }
@@ -42,6 +50,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const currentCustomer = customers.find(c => c.id === customerId);
 
+  const handleOrgFilterChange = (org: string) => {
+    setOrgFilter(org);
+    const list = org === 'all' ? customers : customers.filter(c => c.company === org);
+    setCustomerId(list.length > 0 ? list[0].id : '');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !amount || Number(amount) <= 0) {
@@ -49,7 +63,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
 
-    const selectedCat = categories.find(c => c.id === categoryId);
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -57,16 +70,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       customerId,
       customerName: currentCustomer?.name || '회원',
       customerCompany: currentCustomer?.company || '기업',
-      type,
+      type: 'SPEND',
       amount: Number(amount),
-      categoryId,
-      categoryName: selectedCat?.name || '기타',
-      description: description || `${selectedCat?.shortName || '포인트'} 결제`,
-      merchant: merchant || '온라인 가맹점',
+      categoryId: 'shopping',
+      categoryName: '기타',
+      description: description || '포인트 사용',
+      merchant,
       orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
       timestamp: formattedDate,
       status: 'COMPLETED',
-      paymentMethod,
     });
 
     onClose();
@@ -91,6 +103,26 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+          {/* Organization Filter */}
+          <div className="space-y-1.5">
+            <label className="font-semibold text-slate-700 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-indigo-600" />
+              조직명 선택
+            </label>
+            <select
+              value={orgFilter}
+              onChange={e => handleOrgFilterChange(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            >
+              <option value="all">전체 조직 ({customers.length}명)</option>
+              {uniqueOrgs.map(org => (
+                <option key={org} value={org}>
+                  {org} ({customers.filter(c => c.company === org).length}명)
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Customer Selection */}
           <div className="space-y-1.5">
             <label className="font-semibold text-slate-700">대상 회원 선택 *</label>
@@ -100,7 +132,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               required
             >
-              {customers.map(c => {
+              {orgFilteredCustomers.length === 0 && (
+                <option value="">해당 조직에 등록된 회원이 없습니다</option>
+              )}
+              {orgFilteredCustomers.map(c => {
                 const { name: cleanName, position: cleanPos } = separateNameAndPosition(c.name, c.position);
                 return (
                   <option key={c.id} value={c.id}>
@@ -123,78 +158,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       {currentCustomer.department}
                     </span>
                   </div>
-                  <span className="font-medium text-slate-500">배정: {formatPoints(currentCustomer.totalBudget)}</span>
+                  <span className="font-medium text-slate-500">배정: <span className="font-bold text-slate-900">{formatPoints(currentCustomer.totalBudget)}</span></span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60">
-                  <span className="text-slate-500">현재 사용 실적: {formatPoints(currentCustomer.usedPoints)}</span>
+                  <span className="text-slate-500">현재 사용 실적: <span className="font-bold text-blue-600">{formatPoints(currentCustomer.usedPoints)}</span></span>
                   <span className="font-bold text-emerald-600">가용 잔여: {formatPoints(currentCustomer.remainingPoints)}</span>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Transaction Type */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700">거래 구분 *</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setType('SPEND')}
-                className={`py-2 px-3 rounded-lg border text-center font-medium transition-all ${
-                  type === 'SPEND'
-                    ? 'bg-rose-50 border-rose-400 text-rose-700 font-bold'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                포인트 사용 (차감)
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('RECHARGE')}
-                className={`py-2 px-3 rounded-lg border text-center font-medium transition-all ${
-                  type === 'RECHARGE'
-                    ? 'bg-emerald-50 border-emerald-400 text-emerald-700 font-bold'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                포인트 충전 (적립)
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('REFUND')}
-                className={`py-2 px-3 rounded-lg border text-center font-medium transition-all ${
-                  type === 'REFUND'
-                    ? 'bg-blue-50 border-blue-400 text-blue-700 font-bold'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                사용 취소 (환불)
-              </button>
-            </div>
-          </div>
-
-          {/* Category Selection */}
-          <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700">카테고리 *</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategoryId(cat.id)}
-                  className={`p-2 rounded-lg border text-left flex items-center gap-1.5 transition-all ${
-                    categoryId === cat.id
-                      ? 'border-blue-600 bg-blue-50/80 font-bold text-blue-900'
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <span style={{ color: cat.color }}>
-                    {getCategoryIcon(cat.icon, 'w-3.5 h-3.5')}
-                  </span>
-                  <span className="truncate">{cat.shortName}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Amount */}
@@ -209,7 +180,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               min="1"
               required
             />
-            {type === 'SPEND' && currentCustomer && Number(amount) > currentCustomer.remainingPoints && (
+            {currentCustomer && Number(amount) > currentCustomer.remainingPoints && (
               <p className="text-rose-600 text-[11px] flex items-center gap-1 font-medium">
                 <AlertCircle className="w-3.5 h-3.5" />
                 경고: 입력한 금액이 회원의 잔여 가용 포인트({formatPoints(currentCustomer.remainingPoints)})를 초과합니다.
@@ -217,31 +188,18 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             )}
           </div>
 
-          {/* Merchant & Description */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">사용처 / 가맹점명</label>
-              <input
-                type="text"
-                value={merchant}
-                onChange={e => setMerchant(e.target.value)}
-                placeholder="예: 스타벅스, 신라호텔, 쿠팡"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">결제 수단 / 유형</label>
-              <select
-                value={paymentMethod}
-                onChange={e => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="포인트 즉시 결제">포인트 즉시 결제</option>
-                <option value="바코드 / 모바일 결제">바코드 / 모바일 결제</option>
-                <option value="법인 승인 정산">법인 승인 정산</option>
-                <option value="바우처 / 수강권 발급">바우처 / 수강권 발급</option>
-              </select>
-            </div>
+          {/* Merchant */}
+          <div className="space-y-1.5">
+            <label className="font-semibold text-slate-700">사용처 *</label>
+            <select
+              value={merchant}
+              onChange={e => setMerchant(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-1 focus:ring-blue-500"
+              required
+            >
+              <option value="남산리더십센터">남산리더십센터</option>
+              <option value="스마일즈">스마일즈</option>
+            </select>
           </div>
 
           <div className="space-y-1.5">

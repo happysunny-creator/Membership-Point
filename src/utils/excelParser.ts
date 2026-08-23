@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Category, CategoryId, Customer, CustomerStatus, OrgCategory, Transaction, TransactionType } from '../types';
+import { Category, CategoryId, Customer, CustomerStatus, Transaction, TransactionType } from '../types';
 import { CATEGORIES } from '../data/mockData';
 import { calculateBurnRate } from './formatters';
 import { separateNameAndPosition } from './nameParser';
@@ -102,10 +102,11 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
         let totalPoints = 0;
 
         jsonRows.forEach((row, idx) => {
-          // Normalize keys (trim whitespace and lowercase)
+          // Normalize keys (strip all whitespace, lowercase) so headers like
+          // "합계 포인트" or "거래 일시" still match the alias list below.
           const normalizedRow: Record<string, any> = {};
           Object.keys(row).forEach(k => {
-            normalizedRow[k.trim().toLowerCase()] = row[k];
+            normalizedRow[k.replace(/\s+/g, '').toLowerCase()] = row[k];
           });
 
           // Extract fields flexibly according to specified format
@@ -113,6 +114,7 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
             normalizedRow['조직명'] ||
             normalizedRow['회사'] ||
             normalizedRow['회사명'] ||
+            normalizedRow['회원사'] ||
             normalizedRow['기업명'] ||
             normalizedRow['조직'] ||
             normalizedRow['company'] ||
@@ -168,6 +170,7 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
             normalizedRow['가맹점명'] ||
             normalizedRow['사용장소'] ||
             normalizedRow['상호명'] ||
+            normalizedRow['영업장'] ||
             normalizedRow['merchant'] ||
             normalizedRow['store'] ||
             '';
@@ -179,6 +182,9 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
             normalizedRow['사용액'] ||
             normalizedRow['사용포인트'] ||
             normalizedRow['결제금액'] ||
+            normalizedRow['포인트(p)-합계'] ||
+            normalizedRow['합계포인트'] ||
+            normalizedRow['합계'] ||
             normalizedRow['amount'] ||
             normalizedRow['points'] ||
             0;
@@ -317,7 +323,7 @@ export function downloadExcelTemplate(): void {
       조직명: '(주)에이스테크놀로지',
       소속: '전략기획본부',
       성함: '김민수',
-      직책: '이사',
+      직위: '이사',
       사용날짜: '2026-08-18',
       사용처: '쿠팡 로켓와우',
       사용금액: 150000,
@@ -326,7 +332,7 @@ export function downloadExcelTemplate(): void {
       조직명: '글로벌솔루션즈',
       소속: 'AI 플랫폼 R&D 센터',
       성함: '이지은',
-      직책: '수석연구원',
+      직위: '수석연구원',
       사용날짜: '2026-08-18',
       사용처: '스타벅스 코리아',
       사용금액: 45000,
@@ -335,7 +341,7 @@ export function downloadExcelTemplate(): void {
       조직명: '넥스트커머스인터내셔널',
       소속: '글로벌마케팅본부',
       성함: '최유진',
-      직책: '본부장',
+      직위: '본부장',
       사용날짜: '2026-08-17',
       사용처: '신라호텔',
       사용금액: 420000,
@@ -344,7 +350,7 @@ export function downloadExcelTemplate(): void {
       조직명: '네오모빌리티(주)',
       소속: '자율주행기술팀',
       성함: '박상현',
-      직책: '책임연구원',
+      직위: '책임연구원',
       사용날짜: '2026-08-16',
       사용처: '인프런',
       사용금액: 88000,
@@ -358,7 +364,7 @@ export function downloadExcelTemplate(): void {
     { wch: 24 }, // 조직명
     { wch: 22 }, // 소속
     { wch: 14 }, // 성함
-    { wch: 14 }, // 직책
+    { wch: 14 }, // 직위
     { wch: 16 }, // 사용날짜
     { wch: 22 }, // 사용처
     { wch: 16 }, // 사용금액
@@ -368,6 +374,98 @@ export function downloadExcelTemplate(): void {
   XLSX.utils.book_append_sheet(wb, ws, '포인트사용실적양식');
 
   XLSX.writeFile(wb, '포인트_사용실적_업로드_양식.xlsx');
+}
+
+export interface OrgNameExcelImportResult {
+  names: string[];
+  totalRows: number;
+  addedCount: number;
+  duplicateCount: number;
+  fileName: string;
+}
+
+// Generate Organization Name List Template XLSX (조직 표시 우선순위 - 조직명 일괄 등록)
+export function downloadOrgNameExcelTemplate(): void {
+  const templateData = [
+    { 조직명: '전략기획본부' },
+    { 조직명: '경영지원본부' },
+    { 조직명: 'DT·플랫폼사업부' },
+    { 조직명: '미래기술R&D센터' },
+  ];
+
+  const ws = XLSX.utils.json_to_sheet(templateData);
+  ws['!cols'] = [{ wch: 24 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '조직명목록');
+
+  XLSX.writeFile(wb, '조직명_일괄등록_양식.xlsx');
+}
+
+// Parse Organization Name List Excel File (single column of org names)
+export async function parseOrgNameExcelFile(file: File): Promise<OrgNameExcelImportResult> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        if (workbook.SheetNames.length === 0) {
+          throw new Error('엑셀 파일에 시트가 존재하지 않습니다.');
+        }
+
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
+
+        if (rawJson.length === 0) {
+          throw new Error('엑셀 시트에 데이터가 비어있습니다.');
+        }
+
+        const knownKeys = ['조직명', '조직', '회사', '회사명', '기업명', 'company', 'organization', 'name'];
+        const seen = new Set<string>();
+        const names: string[] = [];
+        let duplicateCount = 0;
+
+        rawJson.forEach(row => {
+          const keys = Object.keys(row);
+          const matchedKey = keys.find(k => knownKeys.includes(k.trim().toLowerCase().replace(/\s+/g, '')));
+          let value = '';
+          if (matchedKey) {
+            value = String(row[matchedKey] ?? '').trim();
+          } else if (keys.length > 0) {
+            // No recognized header - fall back to the first column's value
+            value = String(row[keys[0]] ?? '').trim();
+          }
+          if (!value) return;
+          if (seen.has(value)) {
+            duplicateCount++;
+            return;
+          }
+          seen.add(value);
+          names.push(value);
+        });
+
+        resolve({
+          names,
+          totalRows: rawJson.length,
+          addedCount: names.length,
+          duplicateCount,
+          fileName: file.name,
+        });
+      } catch (err: any) {
+        reject(new Error(err.message || '엑셀 파일 파싱 중 오류가 발생했습니다.'));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('파일을 읽는 도중 오류가 발생했습니다.'));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 export interface ParsedCustomerRow {
@@ -399,7 +497,7 @@ export function downloadCustomerExcelTemplate(): void {
       조직명: '경영지원본부',
       소속: '인사총무팀',
       성함: '김민수',
-      직책: '팀장',
+      직위: '팀장',
       담당자: '박운영',
       금액: 5000000,
       비고및관리메모: '2026 하반기 부서 복지 및 워크숍 포인트 배정',
@@ -408,7 +506,7 @@ export function downloadCustomerExcelTemplate(): void {
       조직명: '전략기획본부',
       소속: '경영기획실',
       성함: '이지은',
-      직책: '수석연구원',
+      직위: '수석연구원',
       담당자: '정운영',
       금액: 8000000,
       비고및관리메모: '전략 프로젝트 우수 성과 리워드 배정',
@@ -417,7 +515,7 @@ export function downloadCustomerExcelTemplate(): void {
       조직명: 'DT·플랫폼사업부',
       소속: '플랫폼개발팀',
       성함: '박준호',
-      직책: '팀장',
+      직위: '팀장',
       담당자: '김운영',
       금액: 6000000,
       비고및관리메모: '개발팀 직무도서 및 디지털 교육 지원',
@@ -426,7 +524,7 @@ export function downloadCustomerExcelTemplate(): void {
       조직명: '미래기술R&D센터',
       소속: 'AI연구개발팀',
       성함: '정우진',
-      직책: '책임연구원',
+      직위: '책임연구원',
       담당자: '박운영',
       금액: 7500000,
       비고및관리메모: 'AI 모델 연구 및 글로벌 컨퍼런스 포인트',
@@ -439,7 +537,7 @@ export function downloadCustomerExcelTemplate(): void {
     { wch: 24 }, // 조직명
     { wch: 22 }, // 소속
     { wch: 14 }, // 성함
-    { wch: 14 }, // 직책
+    { wch: 14 }, // 직위
     { wch: 18 }, // 담당자
     { wch: 16 }, // 금액
     { wch: 40 }, // 비고및관리메모
@@ -449,6 +547,47 @@ export function downloadCustomerExcelTemplate(): void {
   XLSX.utils.book_append_sheet(wb, ws, '회원일괄등록양식');
 
   XLSX.writeFile(wb, '회원_일괄등록_양식.xlsx');
+}
+
+// Export all currently registered members' full information to an Excel file
+export function downloadCustomerDataExcel(customers: Customer[]): void {
+  const rows = customers.map(c => {
+    const { name, position } = separateNameAndPosition(c.name, c.position);
+    return {
+      조직명: c.company,
+      소속: c.department,
+      성함: name,
+      직위: position || '',
+      담당자: c.manager || '',
+      배정포인트: c.totalBudget,
+      사용실적: c.usedPoints,
+      잔여포인트: c.remainingPoints,
+      가입일: c.joinedDate || '',
+      최근활동일: c.lastActivityDate || '',
+      비고및관리메모: c.notes || '',
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  ws['!cols'] = [
+    { wch: 24 }, // 조직명
+    { wch: 22 }, // 소속
+    { wch: 14 }, // 성함
+    { wch: 14 }, // 직위
+    { wch: 18 }, // 담당자
+    { wch: 16 }, // 배정포인트
+    { wch: 16 }, // 사용실적
+    { wch: 16 }, // 잔여포인트
+    { wch: 14 }, // 가입일
+    { wch: 14 }, // 최근활동일
+    { wch: 40 }, // 비고및관리메모
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '회원정보');
+
+  XLSX.writeFile(wb, `회원_정보_전체_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 // Parse Customer Registration Excel File
@@ -556,186 +695,3 @@ export async function parseCustomerExcelFile(file: File): Promise<CustomerExcelI
     reader.readAsArrayBuffer(file);
   });
 }
-
-// Org Category Excel Interfaces & Functions
-export interface ParsedOrgCategoryRow {
-  index: number;
-  company: string;
-  department: string;
-  categoryName: string;
-  categoryCode: string;
-  allocatedBudget: number;
-  description: string;
-  isActive: boolean;
-  isValid: boolean;
-  validationMessage?: string;
-}
-
-export interface OrgCategoryExcelImportResult {
-  rows: ParsedOrgCategoryRow[];
-  totalRows: number;
-  validRowsCount: number;
-  invalidRowsCount: number;
-  fileName: string;
-}
-
-// Download Org Category Excel Template
-export function downloadOrgCategoryExcelTemplate() {
-  const templateData = [
-    {
-      조직명: '현대자동차 연구소',
-      '소속(부서)': '자율주행선행개발팀',
-      카테고리명: '식음료 / 회식비',
-      카테고리코드: 'FNB-HD-01',
-      배정예산: 5000000,
-      비고: '부서 회식 및 카페/다과 포인트 지원',
-      사용여부: 'Y',
-    },
-    {
-      조직명: '현대자동차 연구소',
-      '소속(부서)': '자율주행선행개발팀',
-      카테고리명: '연구 도서 / 기술교육',
-      카테고리코드: 'EDU-HD-02',
-      배정예산: 3000000,
-      비고: '전문 서적 및 해외 컨퍼런스 참가비',
-      사용여부: 'Y',
-    },
-    {
-      조직명: '(주)에이스테크놀로지',
-      '소속(부서)': '경영전략본부',
-      카테고리명: '임직원 복지 / 선물',
-      카테고리코드: 'WELL-ACE-01',
-      배정예산: 10000000,
-      비고: '명절 선물 및 온라인쇼핑 바우처',
-      사용여부: 'Y',
-    },
-    {
-      조직명: '삼성바이오로직스 협력단',
-      '소속(부서)': '품질검증1팀',
-      카테고리명: '종합건강검진 / 헬스케어',
-      카테고리코드: 'HLTH-SB-01',
-      배정예산: 6000000,
-      비고: '협력단 전용 정밀검진 및 웰니스 지원',
-      사용여부: 'Y',
-    },
-  ];
-
-  const ws = XLSX.utils.json_to_sheet(templateData);
-
-  ws['!cols'] = [
-    { wch: 24 }, // 조직명
-    { wch: 22 }, // 소속(부서)
-    { wch: 24 }, // 카테고리명
-    { wch: 18 }, // 카테고리코드
-    { wch: 16 }, // 배정예산
-    { wch: 36 }, // 비고
-    { wch: 12 }, // 사용여부
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '조직별카테고리양식');
-  XLSX.writeFile(wb, '조직별_카테고리_업로드양식.xlsx');
-}
-
-// Parse Org Category Excel File
-export async function parseOrgCategoryExcelFile(file: File): Promise<OrgCategoryExcelImportResult> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = e => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-
-        if (workbook.SheetNames.length === 0) {
-          throw new Error('엑셀 파일에 시트가 존재하지 않습니다.');
-        }
-
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rawJson = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
-
-        if (rawJson.length === 0) {
-          throw new Error('엑셀 시트에 데이터가 비어있습니다.');
-        }
-
-        const parsedRows: ParsedOrgCategoryRow[] = [];
-
-        rawJson.forEach((row, index) => {
-          const getVal = (keys: string[]): string => {
-            for (const k of keys) {
-              const matchedKey = Object.keys(row).find(
-                key => key.toLowerCase().replace(/\s+/g, '') === k.toLowerCase().replace(/\s+/g, '')
-              );
-              if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== '') {
-                return String(row[matchedKey]).trim();
-              }
-            }
-            return '';
-          };
-
-          const company = getVal(['조직명', '회사', '기업', '기업명', '조직', 'company', 'organization']);
-          const department = getVal(['소속(부서)', '소속', '소속부서', '부서', '본부', '팀', 'department', 'team']);
-          const categoryName = getVal(['카테고리명', '카테고리', '항목명', '항목', 'category', 'categoryname', 'name']);
-          const categoryCode = getVal(['카테고리코드', '코드', 'code', 'categorycode']);
-          const budgetRaw = getVal(['배정예산', '예산', '배정포인트', '포인트', 'budget', 'amount']);
-          const description = getVal(['비고', '설명', '메모', '비고및설명', 'description', 'notes', 'memo']);
-          const activeRaw = getVal(['사용여부', '사용', '상태', 'active', 'isactive']);
-
-          let allocatedBudget = 0;
-          if (budgetRaw) {
-            const cleanNum = String(budgetRaw).replace(/[^0-9.-]+/g, '');
-            allocatedBudget = parseFloat(cleanNum) || 0;
-          }
-
-          const isActive = !activeRaw || activeRaw.toUpperCase() === 'Y' || activeRaw === '사용' || activeRaw === 'true' || activeRaw === 'TRUE';
-
-          let isValid = true;
-          let validationMessage = '';
-
-          if (!company) {
-            isValid = false;
-            validationMessage = '조직명 누락';
-          } else if (!categoryName) {
-            isValid = false;
-            validationMessage = '카테고리명 누락';
-          }
-
-          parsedRows.push({
-            index: index + 1,
-            company: company || '미지정 조직',
-            department: department || '전체 부서',
-            categoryName: categoryName || `카테고리-${index + 1}`,
-            categoryCode: categoryCode || `CAT-${Date.now().toString().slice(-4)}-${index + 1}`,
-            allocatedBudget,
-            description: description || '',
-            isActive,
-            isValid,
-            validationMessage: isValid ? undefined : validationMessage,
-          });
-        });
-
-        const validRowsCount = parsedRows.filter(r => r.isValid).length;
-        const invalidRowsCount = parsedRows.filter(r => !r.isValid).length;
-
-        resolve({
-          rows: parsedRows,
-          totalRows: parsedRows.length,
-          validRowsCount,
-          invalidRowsCount,
-          fileName: file.name,
-        });
-      } catch (err: any) {
-        reject(new Error(err.message || '엑셀 파일 파싱 중 오류가 발생했습니다.'));
-      }
-    };
-
-    reader.onerror = () => {
-      reject(new Error('파일을 읽는 도중 오류가 발생했습니다.'));
-    };
-
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Category, Customer, Transaction } from '../types';
 import { formatPoints, getTransactionTypeBadge } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
@@ -22,7 +22,26 @@ import {
   User,
   Briefcase,
   Wallet,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+
+const PAGE_SIZE = 30;
+
+// Builds a windowed page-number list with ellipses, e.g. [1, 'ellipsis', 4, 5, 6, 'ellipsis', 12]
+function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
+  const delta = 1;
+  const pages: (number | 'ellipsis')[] = [1];
+  const rangeStart = Math.max(2, current - delta);
+  const rangeEnd = Math.min(total - 1, current + delta);
+
+  if (rangeStart > 2) pages.push('ellipsis');
+  for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+  if (rangeEnd < total - 1) pages.push('ellipsis');
+  if (total > 1) pages.push(total);
+
+  return pages;
+}
 
 interface TransactionHistoryTableProps {
   transactions: Transaction[];
@@ -45,6 +64,12 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 }) => {
   const [editingTxn, setEditingTxn] = useState<Transaction | null>(null);
   const [deletingTxn, setDeletingTxn] = useState<Transaction | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Filters/search change the transactions list identity — always land back on page 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [transactions]);
 
   const getCategoryMeta = (catId: string) => {
     return categories.find(c => c.id === catId);
@@ -54,6 +79,11 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
     (sum, t) => sum + (t.type === 'SPEND' ? t.amount : -t.amount),
     0
   );
+
+  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const paginatedTransactions = transactions.slice(pageStart, pageStart + PAGE_SIZE);
 
   const handleConfirmDelete = () => {
     if (deletingTxn && onDeleteTransaction) {
@@ -78,13 +108,13 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              조회된 실적 합계: <span className="font-bold text-rose-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span> (조직명, 소속 부서, 성함, 직책, 사용일시, 사용처, 사용금액)
+              조회된 실적 합계: <span className="font-bold text-blue-600 font-mono">{formatPoints(Math.abs(totalFilteredAmount))}</span> (조직명, 소속 부서, 성함, 직위, 사용일시, 사용처, 사용금액)
             </p>
           </div>
         </div>
       </div>
 
-      {/* Table Content: 조직명, 소속, 성함, 직책, 사용날짜, 사용처, 사용금액, 수정/휴지통 */}
+      {/* Table Content: 조직명, 소속, 성함, 직위, 사용날짜, 사용처, 사용금액, 수정/휴지통 */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
@@ -110,7 +140,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
               <th className="py-3 px-4 text-left">
                 <div className="flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                  <span>직책</span>
+                  <span>직위</span>
                 </div>
               </th>
               <th className="py-3 px-4 text-left">
@@ -146,7 +176,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                 </td>
               </tr>
             ) : (
-              transactions.map(txn => {
+              paginatedTransactions.map(txn => {
                 const matchedCust = customers.find(
                   c => c.id === txn.customerId || c.name === txn.customerName
                 );
@@ -191,7 +221,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                       </button>
                     </td>
 
-                    {/* 4. 직책 */}
+                    {/* 4. 직위 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       {position ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 font-medium border border-slate-200">
@@ -221,7 +251,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 
                     {/* 7. 사용금액 */}
                     <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-                      <div className="font-bold text-sm text-rose-600 font-mono">
+                      <div className="font-bold text-sm text-blue-600 font-mono">
                         {formatPoints(txn.amount)}
                       </div>
                     </td>
@@ -252,6 +282,64 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {transactions.length > 0 && (
+        <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-xs text-slate-500">
+            총 <strong className="text-slate-700 font-semibold">{transactions.length}</strong>건 중{' '}
+            <strong className="text-slate-700 font-semibold">
+              {pageStart + 1}-{Math.min(pageStart + PAGE_SIZE, transactions.length)}
+            </strong>
+            번째 표시
+          </span>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                title="이전 페이지"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              {getPageNumbers(safePage, totalPages).map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="px-1.5 text-xs text-slate-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-[28px] h-7 px-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      page === safePage
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                title="다음 페이지"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Edit Transaction Modal */}
       {editingTxn && (

@@ -295,24 +295,24 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  표준 컬럼 순서 (<strong>조직명, 소속, 성함, 직책, 사용날짜, 사용처, 사용금액</strong>):
+                  표준 컬럼 순서 (<strong>조직명, 소속, 성함, 직위, 사용날짜, 사용처, 사용금액</strong>):
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                     <strong className="text-slate-900 block">조직명 / 소속</strong>
-                    <span className="text-slate-400">조직명, 소속(부서), 회사</span>
+                    <span className="text-slate-400">조직명, 소속(부서), 회사, 회원사</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                    <strong className="text-slate-900 block">성함 / 직책 (필수)</strong>
-                    <span className="text-slate-400">성함, 이름, 회원명, 직책</span>
+                    <strong className="text-slate-900 block">성함 / 직위 (필수)</strong>
+                    <span className="text-slate-400">성함, 이름, 회원명, 직위</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                     <strong className="text-slate-900 block">사용날짜 / 사용처</strong>
-                    <span className="text-slate-400">사용날짜, 사용처(가맹점)</span>
+                    <span className="text-slate-400">사용날짜, 거래일시, 사용처, 영업장</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                     <strong className="text-slate-900 block">사용금액 (필수)</strong>
-                    <span className="text-slate-400">사용금액, 포인트, 금액</span>
+                    <span className="text-slate-400">사용금액, 포인트(P) - 합계, 합계포인트, 합계, 포인트, 금액</span>
                   </div>
                 </div>
               </div>
@@ -392,7 +392,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                         type="number"
                         value={defaultNewCustomerBudget}
                         onChange={e => setDefaultNewCustomerBudget(Number(e.target.value))}
-                        className="w-32 px-2 py-1 bg-white border border-purple-200 rounded text-purple-900 font-bold text-xs"
+                        className="w-32 px-2 py-1 bg-white border border-purple-200 rounded text-slate-900 font-bold text-xs"
                       />
                       <span className="text-purple-700 font-semibold text-[11px]">P</span>
                     </div>
@@ -440,7 +440,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                         <th className="py-2.5 px-3">
                           <div className="flex items-center gap-1">
                             <Briefcase className="w-3 h-3 text-slate-400" />
-                            <span>직책</span>
+                            <span>직위</span>
                           </div>
                         </th>
                         <th className="py-2.5 px-3">사용날짜</th>
@@ -482,7 +482,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                                 )}
                               </div>
                             </td>
-                            {/* 직책 */}
+                            {/* 직위 */}
                             <td className="py-2 px-3 whitespace-nowrap text-slate-600">
                               {row.position || '직원'}
                             </td>
@@ -495,7 +495,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                               {row.merchant || '-'}
                             </td>
                             {/* 사용금액 */}
-                            <td className="py-2 px-3 text-right font-bold text-rose-600 whitespace-nowrap">
+                            <td className="py-2 px-3 text-right font-bold text-blue-600 whitespace-nowrap">
                               {formatPoints(row.amount)}
                             </td>
                             {/* 검증 */}

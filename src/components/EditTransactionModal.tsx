@@ -193,11 +193,11 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                 />
               </div>
 
-              {/* 직책 */}
+              {/* 직위 */}
               <div>
                 <label className="text-[11px] text-slate-600 font-bold block mb-1 flex items-center gap-1">
                   <Briefcase className="w-3 h-3 text-slate-400" />
-                  직책
+                  직위
                 </label>
                 <input
                   type="text"

@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Category, Customer, OrgCategory, SystemSettings } from '../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Customer, SystemSettings } from '../types';
 import { formatPoints, formatNumber } from '../utils/formatters';
-import { downloadExcelTemplate } from '../utils/excelParser';
-import { OrgCategoryManagement } from './OrgCategoryManagement';
+import { downloadExcelTemplate, parseOrgNameExcelFile, downloadOrgNameExcelTemplate, downloadCustomerExcelTemplate } from '../utils/excelParser';
+import { AddCustomerModal } from './AddCustomerModal';
 import {
   Settings,
   Sliders,
@@ -16,23 +16,20 @@ import {
   Layers,
   Gauge,
   AlertTriangle,
-  Sparkles,
   HelpCircle,
   TrendingUp,
   ArrowUp,
   ArrowDown,
   ListOrdered,
+  PlusCircle,
+  Trash2,
+  Edit2,
+  X,
 } from 'lucide-react';
 
 interface SettingsViewProps {
   settings: SystemSettings;
   onUpdateSettings: (newSettings: SystemSettings) => void;
-  categories: Category[];
-  orgCategories: OrgCategory[];
-  onAddOrgCategory: (category: Omit<OrgCategory, 'id' | 'updatedAt'>) => void;
-  onUpdateOrgCategory: (updatedCategory: OrgCategory) => void;
-  onDeleteOrgCategory: (categoryId: string) => void;
-  onImportOrgCategories: (newCategories: OrgCategory[], mode: 'append' | 'replace') => void;
   customers: Customer[];
   onAddCustomer: (newCustomer: Customer) => void;
   onBatchAddCustomers: (newCustomers: Customer[]) => void;
@@ -48,12 +45,6 @@ interface SettingsViewProps {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
   onUpdateSettings,
-  categories,
-  orgCategories,
-  onAddOrgCategory,
-  onUpdateOrgCategory,
-  onDeleteOrgCategory,
-  onImportOrgCategories,
   customers,
   onAddCustomer,
   onBatchAddCustomers,
@@ -65,7 +56,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   totalCustomers,
   totalTransactions,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'usage-rates' | 'org-categories' | 'system'>('usage-rates');
+  const [activeSubTab, setActiveSubTab] = useState<'usage-rates' | 'org-categories' | 'system'>('org-categories');
   const [formState, setFormState] = useState<SystemSettings>({
     ...settings,
     stage1MaxPercent: settings.stage1MaxPercent ?? 30,
@@ -74,9 +65,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     warningThresholdPercent: settings.warningThresholdPercent ?? 60,
     perfectThresholdPercent: settings.perfectThresholdPercent ?? 90,
   });
-  const [simulatedRate, setSimulatedRate] = useState<number>(75);
   const [isSaved, setIsSaved] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isMemberExcelUploadOpen, setIsMemberExcelUploadOpen] = useState(false);
+
+  // Point/currency unit (직접 수정 가능한 통화 단위)
+  const [currencyUnitDraft, setCurrencyUnitDraft] = useState(settings.currencyUnit || 'P');
+  const [isCurrencyUnitSaved, setIsCurrencyUnitSaved] = useState(false);
+
+  const handleSaveCurrencyUnit = () => {
+    const trimmed = currencyUnitDraft.trim();
+    if (!trimmed) {
+      setCurrencyUnitDraft(settings.currencyUnit || 'P');
+      return;
+    }
+    onUpdateSettings({ ...settings, currencyUnit: trimmed });
+    setIsCurrencyUnitSaved(true);
+    setTimeout(() => setIsCurrencyUnitSaved(false), 3000);
+  };
 
   // Organization display priority order (조직 표시 우선순위)
   const uniqueCompanies = useMemo(() => {
@@ -88,18 +94,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }, [customers]);
 
   const [orgOrderDraft, setOrgOrderDraft] = useState<string[]>(() => {
-    const saved = (settings.orgPriorityOrder || []).filter(name => uniqueCompanies.includes(name));
+    const saved = settings.orgPriorityOrder || [];
     const remaining = uniqueCompanies.filter(name => !saved.includes(name));
     return [...saved, ...remaining];
   });
   const [isOrgOrderSaved, setIsOrgOrderSaved] = useState(false);
+  const [newOrgName, setNewOrgName] = useState('');
 
-  // Keep newly-added / removed organizations in sync without discarding the user's manual ordering
+  // Append any organization that shows up in customer records but isn't in the list yet.
+  // Never auto-remove — manually-added organizations (with no members yet) and any
+  // organization the user has explicitly taken out should stay exactly as the user left them.
   useEffect(() => {
     setOrgOrderDraft(prev => {
-      const stillValid = prev.filter(name => uniqueCompanies.includes(name));
-      const newOnes = uniqueCompanies.filter(name => !stillValid.includes(name));
-      return [...stillValid, ...newOnes];
+      const newOnes = uniqueCompanies.filter(name => !prev.includes(name));
+      if (newOnes.length === 0) return prev;
+      return [...prev, ...newOnes];
     });
   }, [uniqueCompanies]);
 
@@ -111,6 +120,100 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
       return next;
     });
+  };
+
+  const handleAddOrgManually = () => {
+    const trimmed = newOrgName.trim();
+    if (!trimmed) return;
+    if (orgOrderDraft.includes(trimmed)) {
+      alert('이미 목록에 있는 조직명입니다.');
+      return;
+    }
+    setOrgOrderDraft(prev => [...prev, trimmed]);
+    setNewOrgName('');
+  };
+
+  const handleRemoveOrgFromOrder = (name: string) => {
+    setOrgOrderDraft(prev => prev.filter(n => n !== name));
+  };
+
+  // Bulk-register organization names from an uploaded Excel/CSV file (single "조직명" column)
+  const orgExcelInputRef = useRef<HTMLInputElement>(null);
+  const [isOrgExcelParsing, setIsOrgExcelParsing] = useState(false);
+
+  const handleOrgExcelButtonClick = () => {
+    orgExcelInputRef.current?.click();
+  };
+
+  const handleOrgExcelFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsOrgExcelParsing(true);
+    try {
+      const result = await parseOrgNameExcelFile(file);
+      let addedCount = 0;
+      setOrgOrderDraft(prev => {
+        const newOnes = result.names.filter(name => !prev.includes(name));
+        addedCount = newOnes.length;
+        return [...prev, ...newOnes];
+      });
+      const skippedCount = result.names.length - addedCount;
+      alert(
+        `[${result.fileName}] 파일에서 조직명 ${result.totalRows}건을 확인했습니다.\n` +
+          `신규 추가: ${addedCount}건 / 이미 목록에 있어 건너뜀: ${skippedCount}건` +
+          (result.duplicateCount > 0 ? ` / 파일 내 중복: ${result.duplicateCount}건` : '')
+      );
+    } catch (err: any) {
+      alert(err?.message || '엑셀 파일을 처리하는 중 오류가 발생했습니다.');
+    } finally {
+      setIsOrgExcelParsing(false);
+      e.target.value = '';
+    }
+  };
+
+  // Inline rename for an organization in the priority list. Since every other screen in the
+  // app groups by each member's `company` field (not by this list), renaming here also
+  // cascades to every member currently under the old name — otherwise the old name would
+  // just reappear (re-detected from customer records) and the rename would have no visible effect.
+  const [editingOrgIndex, setEditingOrgIndex] = useState<number | null>(null);
+  const [editingOrgValue, setEditingOrgValue] = useState('');
+
+  const handleStartEditOrg = (index: number) => {
+    setEditingOrgIndex(index);
+    setEditingOrgValue(orgOrderDraft[index]);
+  };
+
+  const handleCancelEditOrg = () => {
+    setEditingOrgIndex(null);
+    setEditingOrgValue('');
+  };
+
+  const handleConfirmEditOrg = () => {
+    if (editingOrgIndex === null) return;
+    const oldName = orgOrderDraft[editingOrgIndex];
+    const trimmed = editingOrgValue.trim();
+
+    if (!trimmed || trimmed === oldName) {
+      handleCancelEditOrg();
+      return;
+    }
+    if (orgOrderDraft.includes(trimmed)) {
+      alert('이미 목록에 있는 조직명입니다.');
+      return;
+    }
+
+    const affectedMembers = customers.filter(c => c.company === oldName);
+    if (affectedMembers.length > 0) {
+      const confirmed = confirm(
+        `[${oldName}] 소속 회원 ${affectedMembers.length}명의 조직명이 [${trimmed}](으)로 함께 변경됩니다. 계속할까요?`
+      );
+      if (!confirmed) return;
+      affectedMembers.forEach(c => onUpdateCustomer({ ...c, company: trimmed }));
+    }
+
+    setOrgOrderDraft(prev => prev.map((name, i) => (i === editingOrgIndex ? trimmed : name)));
+    handleCancelEditOrg();
   };
 
   const handleSaveOrgOrder = () => {
@@ -176,41 +279,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setTimeout(() => setIsSaved(false), 3000);
   };
 
-  // Helper for simulation based on current edited formState
-  const getSimulatedStage = (rate: number) => {
-    if (rate >= stage3Max) {
-      return {
-        name: `4단계: ${stage3Max}% ~ 100%`,
-        color: 'text-purple-700 bg-purple-50 border-purple-300',
-        badge: 'bg-purple-600 text-white',
-        desc: '목표 예산 최적/고활용 달성 (보라색)',
-      };
-    }
-    if (rate >= stage2Max) {
-      return {
-        name: `3단계: ${stage2Max}% ~ ${stage3Max}%`,
-        color: 'text-emerald-700 bg-emerald-50 border-emerald-300',
-        badge: 'bg-emerald-600 text-white',
-        desc: '안정적이고 균형 있는 표준 소진 진행 (초록색)',
-      };
-    }
-    if (rate >= stage1Max) {
-      return {
-        name: `2단계: ${stage1Max}% ~ ${stage2Max}%`,
-        color: 'text-amber-700 bg-amber-50 border-amber-300',
-        badge: 'bg-amber-500 text-white',
-        desc: '예산 소진 진행 및 주의 관리 (주황색)',
-      };
-    }
-    return {
-      name: `1단계: 0% ~ ${stage1Max}%`,
-      color: 'text-rose-700 bg-rose-50 border-rose-300',
-      badge: 'bg-rose-500 text-white',
-      desc: '예산 소진 초기 / 집중 독려 필요 (빨간색)',
-    };
-  };
-
-  const simResult = getSimulatedStage(simulatedRate);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -223,13 +291,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div>
             <h2 className="text-lg font-bold text-slate-900">환경 설정 및 운영 관리</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              포인트 관리기준 (4단계: 0~30% 빨강, 30~50% 주황, 50~70% 초록, 70% 이상 보라), 조직별 카테고리 관리, 데이터 백업 및 시스템 운영 정책을 설정합니다.
+              포인트 관리기준 (4단계: 0~30% 빨강, 30~50% 주황, 50~70% 초록, 70% 이상 보라), 조직 목록 관리, 데이터 백업 및 시스템 운영 정책을 설정합니다.
             </p>
           </div>
         </div>
 
         {/* Sub-tabs Navigation */}
         <div className="flex flex-wrap items-center bg-slate-100 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('org-categories')}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeSubTab === 'org-categories'
+                ? 'bg-white text-emerald-800 shadow-xs border border-emerald-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layers className="w-4 h-4 text-emerald-600" />
+            <span>조직 목록 관리</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-mono">
+              {orgOrderDraft.length}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveSubTab('usage-rates')}
@@ -243,22 +327,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span>포인트 관리기준</span>
             <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-full font-bold">
               4단계
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('org-categories')}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeSubTab === 'org-categories'
-                ? 'bg-white text-emerald-800 shadow-xs border border-emerald-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-emerald-600" />
-            <span>조직별 카테고리 관리</span>
-            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-mono">
-              {orgCategories.length}
             </span>
           </button>
 
@@ -625,61 +693,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </ul>
               </div>
             </div>
-
-            {/* 3. 실시간 포인트 4단계 상태 판별 시뮬레이터 */}
-            <div className="bg-indigo-50/50 p-4 sm:p-5 rounded-2xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">실시간 포인트 4단계 판별 시뮬레이터</h4>
-                  <p className="text-[11px] text-slate-500">
-                    설정한 기준치(1단계 0~{stage1Max}%, 2단계 {stage1Max}~{stage2Max}%, 3단계 {stage2Max}~{stage3Max}%, 4단계 {stage3Max}%~)가 어떻게 판별되는지 슬라이더로 즉시 확인해보세요.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="flex-1 sm:w-48">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={simulatedRate}
-                    onChange={e => setSimulatedRate(Number(e.target.value))}
-                    className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                  />
-                  <div className="flex justify-between text-[10px] text-indigo-900 font-mono mt-1">
-                    <span>0%</span>
-                    <span className="font-bold text-indigo-700">{simulatedRate}%</span>
-                    <span>100%</span>
-                  </div>
-                </div>
-
-                <div className={`px-3 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 ${simResult.color}`}>
-                  <span className={`w-2 h-2 rounded-full ${simResult.badge}`}></span>
-                  <span>{simResult.name}</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
 
-      {/* SUB-TAB 2: 조직별 카테고리 관리 */}
+      {/* SUB-TAB 2: 조직 목록 관리 (표시 우선순위) */}
       {activeSubTab === 'org-categories' && (
-        <OrgCategoryManagement
-          categories={orgCategories}
-          onAddCategory={onAddOrgCategory}
-          onUpdateCategory={onUpdateOrgCategory}
-          onDeleteCategory={onDeleteOrgCategory}
-          onImportCategories={onImportOrgCategories}
-        />
-      )}
-
-      {/* SUB-TAB 3: 운영 정책 & 데이터 관리 */}
-      {activeSubTab === 'system' && (
         <div className="space-y-6">
           {/* Organization Display Priority Order */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-4">
@@ -709,6 +728,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
                   <span>초기화</span>
                 </button>
+                <input
+                  ref={orgExcelInputRef}
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleOrgExcelFileChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={handleOrgExcelButtonClick}
+                  disabled={isOrgExcelParsing}
+                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="조직명 목록(.xlsx/.csv)을 업로드하여 일괄 등록"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{isOrgExcelParsing ? '처리 중...' : '조직명 엑셀로 등록'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadOrgNameExcelTemplate}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-colors cursor-pointer"
+                  title="조직명 등록 양식 다운로드"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={handleSaveOrgOrder}
@@ -720,114 +764,141 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
+            {/* Add a new organization directly (e.g. before it has any members yet) */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newOrgName}
+                onChange={e => setNewOrgName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddOrgManually();
+                  }
+                }}
+                placeholder="신규 조직명 입력 (예: 카카오엔터프라이즈)"
+                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddOrgManually}
+                className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>조직 직접 추가</span>
+              </button>
+            </div>
+
             {orgOrderDraft.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400">등록된 조직이 없습니다.</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {orgOrderDraft.map((company, index) => (
+                {orgOrderDraft.map((company, index) => {
+                  const isEditing = editingOrgIndex === index;
+                  return (
                   <div
                     key={company}
                     className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-bold flex items-center justify-center shrink-0">
                         {index + 1}
                       </span>
-                      <span className="text-xs font-semibold text-slate-800 truncate" title={company}>
-                        {company}
-                      </span>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editingOrgValue}
+                          onChange={e => setEditingOrgValue(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleConfirmEditOrg();
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault();
+                              handleCancelEditOrg();
+                            }
+                          }}
+                          autoFocus
+                          className="flex-1 min-w-0 px-2 py-1 text-xs font-semibold text-slate-900 bg-white border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-800 truncate" title={company}>
+                          {company}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => moveOrgOrder(index, -1)}
-                        disabled={index === 0}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                        title="위로 이동"
-                      >
-                        <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveOrgOrder(index, 1)}
-                        disabled={index === orgOrderDraft.length - 1}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors cursor-pointer disabled:cursor-not-allowed"
-                        title="아래로 이동"
-                      >
-                        <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
+                      {isEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleConfirmEditOrg}
+                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                            title="저장"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEditOrg}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="취소"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => moveOrgOrder(index, -1)}
+                            disabled={index === 0}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                            title="위로 이동"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveOrgOrder(index, 1)}
+                            disabled={index === orgOrderDraft.length - 1}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                            title="아래로 이동"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditOrg(index)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                            title="조직명 수정"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOrgFromOrder(company)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="목록에서 제거"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
+        </div>
+      )}
 
+      {/* SUB-TAB 3: 운영 정책 & 데이터 관리 */}
+      {activeSubTab === 'system' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Data Management & Backup */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-5">
-              <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">데이터 & 엑셀 통합 관리</h3>
-                  <p className="text-xs text-slate-500">포인트 데이터 일괄 업로드 및 백업</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={onOpenExcelUpload}
-                  className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-800 flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <UploadCloud className="w-4 h-4 text-emerald-600" />
-                    <span>실적 엑셀 파일 일괄 업로드</span>
-                  </div>
-                  <span className="text-[11px] text-emerald-600">.xlsx/.csv</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={downloadExcelTemplate}
-                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Download className="w-4 h-4 text-slate-500" />
-                    <span>실적 표준 엑셀 서식 다운로드</span>
-                  </div>
-                  <span className="text-[11px] text-slate-400">양식</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onExportCSV}
-                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Download className="w-4 h-4 text-slate-500" />
-                    <span>현재 실적 전체 내보내기</span>
-                  </div>
-                  <span className="text-[11px] text-slate-400">CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onResetData}
-                  className="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold text-rose-700 flex items-center justify-between transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <RotateCcw className="w-4 h-4 text-rose-600" />
-                    <span>초기 샘플 데이터로 복원</span>
-                  </div>
-                  <span className="text-[10px] text-rose-500">리셋</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: General System Info */}
+          {/* Left Column: General System Info */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-4">
               <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
@@ -848,19 +919,170 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <strong className="text-slate-900">{totalTransactions}건</strong>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">조직별 등록 카테고리</span>
-                  <strong className="text-slate-900">{orgCategories.length}개</strong>
+                  <span className="text-slate-500">등록 조직 수</span>
+                  <strong className="text-slate-900">{uniqueCompanies.length}개</strong>
                 </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500">포인트 통화 단위</span>
-                  <strong className="text-slate-900 font-mono">P (KRW 1:1)</strong>
+                <div className="flex items-center justify-between py-1 gap-2">
+                  <span className="text-slate-500 shrink-0">포인트 통화 단위</span>
+                  <div className="flex items-center gap-1.5">
+                    {isCurrencyUnitSaved && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    )}
+                    <input
+                      type="text"
+                      value={currencyUnitDraft}
+                      onChange={e => setCurrencyUnitDraft(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveCurrencyUnit();
+                        }
+                      }}
+                      maxLength={8}
+                      className="w-16 px-2 py-1 text-right font-mono font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                    <span className="text-slate-400">(KRW 1:1)</span>
+                    <button
+                      type="button"
+                      onClick={handleSaveCurrencyUnit}
+                      disabled={currencyUnitDraft.trim() === (settings.currencyUnit || 'P')}
+                      title="통화 단위 저장"
+                      className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Right Column: Data Management & Backup */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-5">
+              <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">데이터 & 엑셀 통합 관리</h3>
+                  <p className="text-xs text-slate-500">포인트 데이터 일괄 업로드 및 백업</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Row 1: 회원 - 양식 다운로드(좌) / 업로드(우) */}
+                <button
+                  type="button"
+                  onClick={downloadCustomerExcelTemplate}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-slate-500" />
+                    <span>회원 일괄 등록 양식 다운로드</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">양식</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsMemberExcelUploadOpen(true)}
+                  className="p-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 rounded-xl text-xs font-bold text-blue-800 flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4 text-blue-600" />
+                    <span>회원 엑셀 일괄 등록</span>
+                  </div>
+                  <span className="text-[11px] text-blue-600">.xlsx/.csv</span>
+                </button>
+
+                {/* Row 2: 실적 - 양식 다운로드(좌) / 업로드(우) */}
+                <button
+                  type="button"
+                  onClick={downloadExcelTemplate}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-slate-500" />
+                    <span>실적 표준 엑셀 서식 다운로드</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">양식</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenExcelUpload}
+                  className="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl text-xs font-bold text-emerald-800 flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4 text-emerald-600" />
+                    <span>실적 엑셀 파일 일괄 업로드</span>
+                  </div>
+                  <span className="text-[11px] text-emerald-600">.xlsx/.csv</span>
+                </button>
+
+                {/* Row 3: 조직명 - 양식 다운로드(좌) / 업로드(우) */}
+                <button
+                  type="button"
+                  onClick={downloadOrgNameExcelTemplate}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-slate-500" />
+                    <span>조직명 엑셀 등록 양식 다운로드</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">양식</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOrgExcelButtonClick}
+                  disabled={isOrgExcelParsing}
+                  className="p-3 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-xl text-xs font-bold text-teal-800 flex items-center justify-between transition-colors shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4 text-teal-600" />
+                    <span>{isOrgExcelParsing ? '처리 중...' : '조직명 엑셀 일괄 등록'}</span>
+                  </div>
+                  <span className="text-[11px] text-teal-600">.xlsx/.csv</span>
+                </button>
+
+                {/* Row 4: 데이터 내보내기(좌) / 초기화(우) */}
+                <button
+                  type="button"
+                  onClick={onExportCSV}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-slate-500" />
+                    <span>현재 실적 전체 내보내기</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onResetData}
+                  className="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold text-rose-700 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                    <span>데이터 초기로 복원</span>
+                  </div>
+                  <span className="text-[10px] text-rose-500">리셋</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+          </div>
       )}
+
+      {/* Member Excel Bulk Upload Modal */}
+      <AddCustomerModal
+        isOpen={isMemberExcelUploadOpen}
+        onClose={() => setIsMemberExcelUploadOpen(false)}
+        onSaveCustomer={onAddCustomer}
+        onSaveBatchCustomers={onBatchAddCustomers}
+        initialMode="excel"
+      />
     </div>
   );
 };

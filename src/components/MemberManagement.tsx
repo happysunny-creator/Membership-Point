@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Customer } from '../types';
 import { formatPoints, formatNumber } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
+import { downloadCustomerDataExcel } from '../utils/excelParser';
 import { AddCustomerModal } from './AddCustomerModal';
 import { EditMemberModal } from './EditMemberModal';
 import {
@@ -9,6 +10,7 @@ import {
   Search,
   UserPlus,
   UploadCloud,
+  Download,
   Edit2,
   Trash2,
   Briefcase,
@@ -18,6 +20,11 @@ import {
   UserCheck,
   Layers,
   Network,
+  ArrowLeftRight,
+  PlusCircle,
+  MinusCircle,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 
 interface MemberManagementProps {
@@ -26,6 +33,7 @@ interface MemberManagementProps {
   onBatchAddCustomers: (newCustomers: Customer[]) => void;
   onUpdateCustomer: (updatedCustomer: Customer) => void;
   onDeleteCustomer: (customerId: string) => void;
+  onAdjustBudget: (customerId: string, newBudget: number, reason: string) => void;
 }
 
 export const MemberManagement: React.FC<MemberManagementProps> = ({
@@ -34,6 +42,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   onBatchAddCustomers,
   onUpdateCustomer,
   onDeleteCustomer,
+  onAdjustBudget,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>('all');
@@ -41,6 +50,85 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   const [addModalMode, setAddModalMode] = useState<'single' | 'excel'>('single');
   const [editingMember, setEditingMember] = useState<Customer | null>(null);
   const [deletingMember, setDeletingMember] = useState<Customer | null>(null);
+
+  // Point Allocation / Recovery Management (bottom section)
+  const [pointOpMemberId, setPointOpMemberId] = useState('');
+  const [pointOpMode, setPointOpMode] = useState<'ADD' | 'RECOVER'>('ADD');
+  const [pointOpAmount, setPointOpAmount] = useState<number | ''>('');
+  const [pointOpReason, setPointOpReason] = useState('');
+  const [isPointOpSaved, setIsPointOpSaved] = useState(false);
+  const [pointOpSearchQuery, setPointOpSearchQuery] = useState('');
+  const [isPointOpDropdownOpen, setIsPointOpDropdownOpen] = useState(false);
+
+  const pointOpMember = customers.find(c => c.id === pointOpMemberId) || null;
+
+  const pointOpSearchResults = useMemo(() => {
+    const q = pointOpSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return customers
+      .filter(c => {
+        const parsed = separateNameAndPosition(c.name, c.position);
+        return (
+          parsed.name.toLowerCase().includes(q) ||
+          c.company.toLowerCase().includes(q) ||
+          (c.department && c.department.toLowerCase().includes(q))
+        );
+      })
+      .slice(0, 20);
+  }, [customers, pointOpSearchQuery]);
+
+  const handleSelectPointOpMember = (c: Customer) => {
+    const parsed = separateNameAndPosition(c.name, c.position);
+    setPointOpMemberId(c.id);
+    setPointOpSearchQuery(`${c.company} · ${parsed.name}${parsed.position ? ` (${parsed.position})` : ''}`);
+    setIsPointOpDropdownOpen(false);
+  };
+
+  const handleClearPointOpMember = () => {
+    setPointOpMemberId('');
+    setPointOpSearchQuery('');
+  };
+  const pointOpAmountNum = Number(pointOpAmount) || 0;
+  const previewNewBudget = pointOpMember
+    ? pointOpMode === 'ADD'
+      ? pointOpMember.totalBudget + pointOpAmountNum
+      : Math.max(pointOpMember.totalBudget - pointOpAmountNum, 0)
+    : 0;
+
+  const handleApplyPointOp = () => {
+    if (!pointOpMember) {
+      alert('포인트를 배정/회수할 회원을 선택해주세요.');
+      return;
+    }
+    if (!pointOpAmountNum || pointOpAmountNum <= 0) {
+      alert('올바른 포인트 금액을 입력해주세요.');
+      return;
+    }
+
+    const newBudget =
+      pointOpMode === 'ADD'
+        ? pointOpMember.totalBudget + pointOpAmountNum
+        : Math.max(pointOpMember.totalBudget - pointOpAmountNum, 0);
+
+    if (newBudget < pointOpMember.usedPoints) {
+      alert(
+        `회수 후 예산(${formatPoints(newBudget)})이 이미 사용된 실적(${formatPoints(pointOpMember.usedPoints)})보다 적을 수 없습니다.`
+      );
+      return;
+    }
+
+    const defaultReason =
+      pointOpMode === 'ADD'
+        ? `포인트 배정: +${formatPoints(pointOpAmountNum)}`
+        : `포인트 회수: -${formatPoints(pointOpAmountNum)}`;
+
+    onAdjustBudget(pointOpMember.id, newBudget, pointOpReason.trim() || defaultReason);
+
+    setIsPointOpSaved(true);
+    setPointOpAmount('');
+    setPointOpReason('');
+    setTimeout(() => setIsPointOpSaved(false), 3000);
+  };
 
   // Extract unique companies
   const uniqueCompanies = useMemo(() => {
@@ -71,6 +159,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   const totalMembers = customers.length;
   const totalAllocatedBudget = customers.reduce((sum, c) => sum + (c.totalBudget || 0), 0);
   const managerAssignedCount = customers.filter(c => c.manager && c.manager.trim() !== '').length;
+  const allocatedMembersCount = customers.filter(c => (c.totalBudget || 0) >= 10000).length;
 
   return (
     <div className="space-y-6">
@@ -90,7 +179,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              소속 조직별 회원 명단 등록, 직책 및 담당자 지정, 배정 포인트 현황을 종합 관리합니다.
+              소속 조직별 회원 명단 등록, 직위 및 담당자 지정, 배정 포인트 현황을 종합 관리합니다.
             </p>
           </div>
         </div>
@@ -119,11 +208,20 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             <UserPlus className="w-4 h-4" />
             <span>신규 회원 직접 등록</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => downloadCustomerDataExcel(customers)}
+            className="h-10 px-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>회원 정보 다운받기</span>
+          </button>
         </div>
       </div>
 
       {/* 2. Header Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. 총 등록 조직 */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between h-[112px]">
           <div className="flex items-center justify-between">
@@ -164,7 +262,26 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
           </div>
         </div>
 
-        {/* 3. 총 배정 포인트 */}
+        {/* 3. 총 배정 인원 */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between h-[112px]">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 tracking-tight">총 배정 인원</span>
+            <span className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between mt-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-black text-purple-700 tracking-tight">{formatNumber(allocatedMembersCount)}</span>
+              <span className="text-xs font-semibold text-slate-500">명</span>
+            </div>
+            <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+              10,000P 이상
+            </span>
+          </div>
+        </div>
+
+        {/* 4. 총 배정 포인트 */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between h-[112px]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 tracking-tight">총 배정 포인트</span>
@@ -173,7 +290,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-emerald-700 tracking-tight font-mono">
+            <span className="text-2xl font-black text-slate-900 tracking-tight font-mono">
               {formatPoints(totalAllocatedBudget)}
             </span>
             <span className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
@@ -199,7 +316,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                조직명, 소속 부서, 성함, 직책, 배정 포인트 및 담당자를 확인하고 수정할 수 있습니다.
+                조직명, 소속 부서, 성함, 직위, 배정 포인트 및 담당자를 확인하고 수정할 수 있습니다.
               </p>
             </div>
           </div>
@@ -213,7 +330,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="성함, 조직명, 부서, 직책, 담당자 검색..."
+                placeholder="성함, 조직명, 부서, 직위, 담당자 검색..."
                 className="w-full h-9 pl-9 pr-7 bg-white hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
               />
               {searchQuery && (
@@ -264,7 +381,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                   </div>
                 </th>
                 <th className="py-3 px-4">성함</th>
-                <th className="py-3 px-4">직책</th>
+                <th className="py-3 px-4">직위</th>
                 <th className="py-3 px-4 text-left">배정 포인트</th>
                 <th className="py-3 px-4">담당자</th>
                 <th className="py-3 px-4 text-center w-24">관리</th>
@@ -321,7 +438,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                           <span className="text-slate-400">-</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4 text-left font-mono font-bold text-blue-700 whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-left font-mono font-bold text-slate-900 whitespace-nowrap">
                         {formatPoints(member.totalBudget)}
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
@@ -359,6 +476,176 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
         </div>
       </div>
 
+      {/* Point Allocation / Recovery Management */}
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-2xs space-y-5">
+        <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+            <ArrowLeftRight className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">포인트 배정 / 회수 관리</h3>
+            <p className="text-xs text-slate-500">
+              회원 개인별로 포인트를 직접 추가 배정하거나 회수할 수 있으며, 예산관리·실적관리 등 모든 화면에 즉시 반영됩니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Member Selection & Current Status */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700">대상 회원 선택 *</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={pointOpSearchQuery}
+                onChange={e => {
+                  setPointOpSearchQuery(e.target.value);
+                  setPointOpMemberId('');
+                  setIsPointOpDropdownOpen(true);
+                }}
+                onFocus={() => setIsPointOpDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setIsPointOpDropdownOpen(false), 150)}
+                placeholder="성함으로 검색..."
+                className="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+              {pointOpSearchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearPointOpMember}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 cursor-pointer"
+                  title="선택 해제"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {isPointOpDropdownOpen && pointOpSearchQuery.trim() && !pointOpMemberId && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                  {pointOpSearchResults.length === 0 ? (
+                    <div className="px-3 py-2.5 text-xs text-slate-400">검색 결과가 없습니다.</div>
+                  ) : (
+                    pointOpSearchResults.map(c => {
+                      const parsed = separateNameAndPosition(c.name, c.position);
+                      return (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => handleSelectPointOpMember(c)}
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 cursor-pointer flex items-center justify-between gap-2"
+                        >
+                          <span className="font-semibold text-slate-800 truncate">
+                            {parsed.name} {parsed.position ? <span className="text-slate-400 font-normal">({parsed.position})</span> : ''}
+                          </span>
+                          <span className="text-slate-400 text-[11px] shrink-0">{c.company}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+
+            {pointOpMember && (
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">현재 배정 예산</span>
+                  <span className="font-bold text-slate-900 font-mono">{formatPoints(pointOpMember.totalBudget)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">현재 사용 실적</span>
+                  <span className="font-bold text-blue-600 font-mono">{formatPoints(pointOpMember.usedPoints)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">현재 잔여 포인트</span>
+                  <span className="font-bold text-emerald-600 font-mono">{formatPoints(pointOpMember.remainingPoints)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mode / Amount / Reason / Submit */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPointOpMode('ADD')}
+                className={`py-2 px-3 rounded-lg border text-center text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  pointOpMode === 'ADD'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                포인트 배정 (추가)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPointOpMode('RECOVER')}
+                className={`py-2 px-3 rounded-lg border text-center text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  pointOpMode === 'RECOVER'
+                    ? 'bg-rose-50 border-rose-500 text-rose-700'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <MinusCircle className="w-3.5 h-3.5" />
+                포인트 회수 (차감)
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  {pointOpMode === 'ADD' ? '배정할 포인트 (P)' : '회수할 포인트 (P)'}
+                </label>
+                <input
+                  type="number"
+                  value={pointOpAmount}
+                  onChange={e => setPointOpAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="예: 500000"
+                  min="1"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-700">사유 (선택)</label>
+                <input
+                  type="text"
+                  value={pointOpReason}
+                  onChange={e => setPointOpReason(e.target.value)}
+                  placeholder="예: 우수 성과 특별 포인트 지급"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {pointOpMember && pointOpAmountNum > 0 && (
+              <div className="flex items-center justify-between text-xs bg-indigo-50/60 border border-indigo-100 rounded-xl px-3.5 py-2.5">
+                <span className="text-indigo-800 font-medium">적용 후 배정 예산</span>
+                <span className="font-extrabold text-slate-900 font-mono">{formatPoints(previewNewBudget)}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              {isPointOpSaved && (
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center gap-1.5 animate-in fade-in">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  반영 완료
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleApplyPointOp}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                포인트 반영하기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Add Member Modal (supports both direct and excel modes) */}
       <AddCustomerModal
         isOpen={isAddModalOpen}
@@ -390,7 +677,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               <p className="text-xs text-slate-600 leading-relaxed">
                 선택하신 <strong className="text-slate-900">{deletingMember.name} ({deletingMember.company})</strong> 회원을
                 삭제하시겠습니까?<br />
-                삭제 시 해당 회원의 배정 포인트 및 정보가 시스템에서 제거됩니다.
+                삭제 시 해당 회원의 배정 포인트 및 정보뿐 아니라 관련 거래(실적) 내역도 모두 함께 삭제됩니다.
               </p>
             </div>
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
@@ -403,12 +690,12 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                 <span className="font-semibold text-slate-700">{deletingMember.department || '-'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">성함 / 직책</span>
+                <span className="text-slate-500">성함 / 직위</span>
                 <span className="font-bold text-slate-800">{deletingMember.name} {deletingMember.position ? `(${deletingMember.position})` : ''}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">배정 포인트</span>
-                <span className="font-mono font-bold text-blue-700">{formatPoints(deletingMember.totalBudget)}</span>
+                <span className="font-mono font-bold text-slate-900">{formatPoints(deletingMember.totalBudget)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">담당자</span>

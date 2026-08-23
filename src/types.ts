@@ -16,7 +16,7 @@ export type CustomerStatus =
 export interface Customer {
   id: string;
   name: string;
-  position?: string; // 직책
+  position?: string; // 직위
   email: string;
   phone: string;
   company: string;
@@ -56,17 +56,6 @@ export interface Category {
   targetBudgetRatio: number; // Suggested % distribution
 }
 
-export interface OrgCategory {
-  id: string;
-  company: string;          // 조직명 (예: 현대자동차)
-  department?: string;      // 소속(부서)
-  categoryName: string;     // 카테고리명 (예: 식음료/외식, 사무복지, 출장경비)
-  categoryCode?: string;    // 코드 (예: FNB-01)
-  allocatedBudget?: number; // 배정 예산 (P)
-  description?: string;     // 비고 및 설명
-  isActive: boolean;        // 사용 여부
-  updatedAt: string;        // 최종 수정일
-}
 
 export type TransactionType = 'SPEND' | 'RECHARGE' | 'REFUND' | 'BUDGET_ALLOCATION';
 export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'CANCELLED';

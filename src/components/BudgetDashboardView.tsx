@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { Customer, CustomerStatus, BudgetSummary, SystemSettings } from '../types';
 import {
   Layers,
@@ -19,7 +20,6 @@ import {
   Eye,
   ArrowUpDown,
   Filter,
-  BarChart3,
   TrendingUp,
   Briefcase,
   UserCheck,
@@ -30,17 +30,8 @@ import {
   LayoutGrid,
   ListTree,
   X,
+  Download,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts';
 import {
   formatPoints,
   formatPercent,
@@ -236,57 +227,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     };
   }, [selectedOrgData, summary, orgGroups]);
 
-  // Stage 1~4 member counts for active target (overall or selected org).
-  // Respects the department/search filters so these counts always match what the
-  // table below actually shows — the status filter itself is excluded since these
-  // buttons represent the count *within* each stage, independent of which is selected.
-  const orgStageCounts = useMemo(() => {
-    const targetCusts = selectedOrgData ? selectedOrgData.customers : customers;
-    let s1 = 0, s2 = 0, s3 = 0, s4 = 0;
-    targetCusts.forEach(c => {
-      if (!memberMatchesFilters(c, { includeStatus: false })) return;
-      const rate = calculateBurnRate(c.usedPoints, c.totalBudget);
-      const stage = getStage(rate);
-      if (stage === 'stage4') s4++;
-      else if (stage === 'stage3') s3++;
-      else if (stage === 'stage2') s2++;
-      else s1++;
-    });
-    return { s1, s2, s3, s4 };
-  }, [selectedOrgData, customers, settings, selectedDeptFilter, searchTerm]);
-
-  // Chart Data: Top Organizations Budget vs Spending
-  const chartData = useMemo(() => {
-    return orgGroups.map(org => ({
-      name: org.company.length > 8 ? org.company.slice(0, 8) + '…' : org.company,
-      fullName: org.company,
-      배정예산: org.totalBudget,
-      사용실적: org.totalUsed,
-      잔여포인트: org.totalRemaining,
-      인원수: org.customers.length,
-      사용률: Math.round(org.burnRate * 10) / 10,
-    }));
-  }, [orgGroups]);
-
-  // Custom X-Axis Tick for Organization Chart (Organization Name + Usage Rate)
-  const renderOrgChartXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
-    const item = chartData.find(d => d.name === payload.value || d.fullName === payload.value);
-    const burnRate = item ? item.사용률 : null;
-
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={12} textAnchor="middle" fill="#334155" fontSize={11} fontWeight={600}>
-          {payload.value}
-        </text>
-        {burnRate !== null && (
-          <text x={0} y={0} dy={26} textAnchor="middle" fill="#64748b" fontSize={10} fontWeight={500}>
-            사용률 {formatPercent(burnRate)}
-          </text>
-        )}
-      </g>
-    );
-  };
 
   // Filtered & Sorted Customer List for Customer View
   const filteredCustomers = useMemo(() => {
@@ -404,6 +344,64 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     setSelectedDeptFilter('all');
     setStatusFilter('all');
     setSearchTerm('');
+  };
+
+  // Download the currently displayed 포인트 사용 현황 data as an Excel file:
+  // organization-level totals first, then member-level detail below, using the
+  // same grouped/sorted `orgGroups` data the on-screen cards and table render from.
+  const handleDownloadPointUsageExcel = () => {
+    const columns = ['조직명', '소속부서', '성함', '직위', '배정예산', '사용실적', '잔여 포인트', '사용률'];
+    const rows: (string | number)[][] = [];
+
+    rows.push(['[조직별 합계]']);
+    rows.push(columns);
+    orgGroups.forEach(org => {
+      rows.push([
+        org.company,
+        '',
+        '',
+        '',
+        org.totalBudget,
+        org.totalUsed,
+        org.totalRemaining,
+        `${org.burnRate.toFixed(1)}%`,
+      ]);
+    });
+
+    rows.push([]);
+    rows.push(['[회원별 상세]']);
+    rows.push(columns);
+    orgGroups.forEach(org => {
+      org.customers.forEach(cust => {
+        const { name: cleanName, position: cleanPosition } = separateNameAndPosition(cust.name, cust.position);
+        rows.push([
+          org.company,
+          cust.department,
+          cleanName,
+          cleanPosition,
+          cust.totalBudget,
+          cust.usedPoints,
+          cust.remainingPoints,
+          `${calculateBurnRate(cust.usedPoints, cust.totalBudget).toFixed(1)}%`,
+        ]);
+      });
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 22 }, // 조직명
+      { wch: 20 }, // 소속부서
+      { wch: 12 }, // 성함
+      { wch: 12 }, // 직위
+      { wch: 14 }, // 배정예산
+      { wch: 14 }, // 사용실적
+      { wch: 14 }, // 잔여 포인트
+      { wch: 10 }, // 사용률
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '포인트 사용 현황');
+    XLSX.writeFile(wb, `포인트_사용_실적_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
@@ -568,24 +566,8 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                     소속 이용자 {selectedOrgData.customers.length}명
                   </span>
                 </div>
-                <div className="text-xs text-slate-300 flex flex-wrap items-center gap-2 mt-0.5">
-                  <span className="flex items-center gap-1"><Network className="w-3.5 h-3.5 text-cyan-400" /> 소속 부서: <strong className="text-white">{selectedOrgData.departmentList.join(', ')}</strong></span>
-                  {selectedOrgData.managerList.length > 0 && (
-                    <>
-                      <span>·</span>
-                      <span>담당자: <strong className="text-white">{selectedOrgData.managerList.join(', ')}</strong></span>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
-
-            <button
-              onClick={() => setSelectedOrgFilter('all')}
-              className="self-start sm:self-auto px-3.5 py-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition-colors cursor-pointer"
-            >
-              전체 조직 지표 보기
-            </button>
           </div>
         )}
 
@@ -630,7 +612,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-black text-rose-600 tracking-tight font-mono">
+              <div className="text-2xl font-black text-blue-600 tracking-tight font-mono">
                 {formatPoints(activeMetrics.totalUsed)}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
@@ -673,68 +655,13 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                 <TrendingUp className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-3 space-y-2">
-              <div className="text-2xl font-black text-indigo-600 tracking-tight font-mono">
+            <div className="mt-3">
+              <div className="text-2xl font-black text-rose-600 tracking-tight font-mono">
                 {formatPercent(activeMetrics.burnRate)}
               </div>
-
-              {/* 4-Stage Balanced Mini Grid: Never wraps, perfectly balanced */}
-              <div className="grid grid-cols-4 gap-1 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter(prev => prev === 'stage1' ? 'all' : 'stage1')}
-                  title={`1단계 (0%~${settings?.stage1MaxPercent ?? 30}%): 빨간색 (클릭 시 필터)`}
-                  className={`py-1 px-1 rounded-md text-center border transition-all cursor-pointer ${
-                    statusFilter === 'stage1'
-                      ? 'bg-rose-500 text-white border-rose-600 shadow-2xs font-black ring-2 ring-rose-300'
-                      : 'bg-rose-50/90 text-rose-700 border-rose-200 hover:bg-rose-100 font-bold'
-                  }`}
-                >
-                  <div className="text-[10px] leading-tight opacity-90">1단계</div>
-                  <div className="text-[11px] leading-tight font-extrabold">{orgStageCounts.s1}명</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter(prev => prev === 'stage2' ? 'all' : 'stage2')}
-                  title={`2단계 (${settings?.stage1MaxPercent ?? 30}%~${settings?.stage2MaxPercent ?? 50}%): 주황색 (클릭 시 필터)`}
-                  className={`py-1 px-1 rounded-md text-center border transition-all cursor-pointer ${
-                    statusFilter === 'stage2'
-                      ? 'bg-amber-500 text-white border-amber-600 shadow-2xs font-black ring-2 ring-amber-300'
-                      : 'bg-amber-50/90 text-amber-700 border-amber-200 hover:bg-amber-100 font-bold'
-                  }`}
-                >
-                  <div className="text-[10px] leading-tight opacity-90">2단계</div>
-                  <div className="text-[11px] leading-tight font-extrabold">{orgStageCounts.s2}명</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter(prev => prev === 'stage3' ? 'all' : 'stage3')}
-                  title={`3단계 (${settings?.stage2MaxPercent ?? 50}%~${settings?.stage3MaxPercent ?? 70}%): 초록색 (클릭 시 필터)`}
-                  className={`py-1 px-1 rounded-md text-center border transition-all cursor-pointer ${
-                    statusFilter === 'stage3'
-                      ? 'bg-emerald-500 text-white border-emerald-600 shadow-2xs font-black ring-2 ring-emerald-300'
-                      : 'bg-emerald-50/90 text-emerald-700 border-emerald-200 hover:bg-emerald-100 font-bold'
-                  }`}
-                >
-                  <div className="text-[10px] leading-tight opacity-90">3단계</div>
-                  <div className="text-[11px] leading-tight font-extrabold">{orgStageCounts.s3}명</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter(prev => prev === 'stage4' ? 'all' : 'stage4')}
-                  title={`4단계 (${settings?.stage3MaxPercent ?? 70}% 이상): 보라색 (클릭 시 필터)`}
-                  className={`py-1 px-1 rounded-md text-center border transition-all cursor-pointer ${
-                    statusFilter === 'stage4'
-                      ? 'bg-purple-600 text-white border-purple-700 shadow-2xs font-black ring-2 ring-purple-300'
-                      : 'bg-purple-50/90 text-purple-700 border-purple-200 hover:bg-purple-100 font-bold'
-                  }`}
-                >
-                  <div className="text-[10px] leading-tight opacity-90">4단계</div>
-                  <div className="text-[11px] leading-tight font-extrabold">{orgStageCounts.s4}명</div>
-                </button>
+              <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                <span>누적 사용률</span>
+                <span className="font-semibold text-slate-700">실시간 집계</span>
               </div>
             </div>
           </div>
@@ -753,7 +680,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <span>[{selectedOrgData.company}] 소속 이용자별 상세 현황</span>
+                  <span>[{selectedOrgData.company}] 소속 회원별 상세 현황</span>
                   <span className="px-2 py-0.2 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                     {filteredCustomers.length}명
                   </span>
@@ -900,21 +827,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                               소속 {org.customers.length}명
                             </span>
                           </div>
-                          <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
-                            <span className="text-slate-600 font-medium flex items-center gap-1">
-                              <Network className="w-3 h-3 text-cyan-600 shrink-0" />
-                              {org.departmentList.slice(0, 2).join(', ')}
-                              {org.departmentList.length > 2 && ` 외 ${org.departmentList.length - 2}개 부서`}
-                            </span>
-                            {org.managerList.length > 0 && (
-                              <>
-                                <span>·</span>
-                                <span className="text-slate-500">
-                                  담당자: <strong className="text-slate-700">{org.managerList.join(', ')}</strong>
-                                </span>
-                              </>
-                            )}
-                          </div>
                         </div>
                       </div>
 
@@ -931,7 +843,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                         {/* 사용 실적 */}
                         <div className="text-right">
                           <span className="text-slate-400 block text-[11px]">사용 실적 합계</span>
-                          <span className="font-extrabold text-rose-600 text-sm">
+                          <span className="font-extrabold text-blue-600 text-sm">
                             {formatPoints(org.totalUsed)}
                           </span>
                         </div>
@@ -948,7 +860,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                         <div className="w-36">
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-[11px] text-slate-400">조직 사용률</span>
-                            <span className={`text-[11px] font-bold ${burnRateClass.text}`}>
+                            <span className="text-[11px] font-bold text-rose-600">
                               {formatPercent(org.burnRate)}
                             </span>
                           </div>
@@ -981,7 +893,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                         </div>
 
                         <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-                          <table className="w-full text-left text-xs border-collapse">
+                          <table className="w-full text-left text-sm border-collapse">
                             <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
                               <tr>
                                 <th className="py-2.5 px-4 text-left">
@@ -991,7 +903,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                                   </div>
                                 </th>
                                 <th className="py-2.5 px-3 text-left">성함</th>
-                                <th className="py-2.5 px-3 text-left">직책</th>
+                                <th className="py-2.5 px-3 text-left">직위</th>
                                 <th className="py-2.5 px-3 text-right">배정 예산</th>
                                 <th className="py-2.5 px-3 text-right">사용 실적</th>
                                 <th className="py-2.5 px-3 text-right">잔여 포인트</th>
@@ -1034,7 +946,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                                       </div>
                                     </td>
 
-                                    {/* 직책 */}
+                                    {/* 직위 */}
                                     <td className="py-2.5 px-3 text-slate-600 font-medium">
                                       {parsed.position || '-'}
                                     </td>
@@ -1045,7 +957,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                                     </td>
 
                                     {/* 사용 실적 */}
-                                    <td className="py-2.5 px-3 text-right font-bold text-rose-600 font-mono">
+                                    <td className="py-2.5 px-3 text-right font-bold text-blue-600 font-mono">
                                       {formatPoints(cust.usedPoints)}
                                     </td>
 
@@ -1056,7 +968,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
 
                                     {/* 사용률 */}
                                     <td className="py-2.5 px-3">
-                                      <span className="font-bold text-xs font-mono">{formatPercent(rate)}</span>
+                                      <span className="font-bold font-mono text-rose-600">{formatPercent(rate)}</span>
                                     </td>
 
                                     {/* 작업 버튼 */}
@@ -1104,7 +1016,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
         {/* ================= VIEW 2: 이용자(회원)별 상세 현황 테이블 ================= */}
         {(selectedOrgData !== null || viewMode === 'customer') && (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-100/80 text-slate-700 border-b border-slate-200 font-bold select-none">
                   <th className="py-3 px-4 sm:px-6 text-left">
@@ -1122,7 +1034,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                       <ArrowUpDown className="w-3 h-3 text-slate-400" />
                     </button>
                   </th>
-                  <th className="py-3 px-3 text-left">직책</th>
+                  <th className="py-3 px-3 text-left">직위</th>
                   <th className="py-3 px-3 text-right">
                     <button
                       onClick={() => handleSort('budget')}
@@ -1172,7 +1084,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                 ) : (
                   filteredCustomers.map(customer => {
                     const burnRate = calculateBurnRate(customer.usedPoints, customer.totalBudget);
-                    const burnRateColor = getBurnRateColorClass(burnRate);
                     const parsed = separateNameAndPosition(customer.name, customer.position);
 
                     return (
@@ -1198,35 +1109,35 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                           </div>
                         </td>
 
-                        {/* 3. 직책 */}
+                        {/* 3. 직위 */}
                         <td className="py-3.5 px-3 text-slate-600 font-medium">
                           {parsed.position || '-'}
                         </td>
 
                         {/* 4. Total Budget */}
                         <td className="py-3.5 px-3 text-right">
-                          <span className="font-bold text-slate-900 text-xs font-mono">
+                          <span className="font-bold text-slate-900 font-mono">
                             {formatPoints(customer.totalBudget)}
                           </span>
                         </td>
 
                         {/* 5. Used Points */}
                         <td className="py-3.5 px-3 text-right">
-                          <span className="font-bold text-rose-600 text-xs font-mono">
+                          <span className="font-bold text-blue-600 font-mono">
                             {formatPoints(customer.usedPoints)}
                           </span>
                         </td>
 
                         {/* 6. Remaining Points */}
                         <td className="py-3.5 px-3 text-right">
-                          <span className="font-bold text-emerald-600 text-xs font-mono">
+                          <span className="font-bold text-emerald-600 font-mono">
                             {formatPoints(customer.remainingPoints)}
                           </span>
                         </td>
 
                         {/* 7. Burn Rate (사용률 수치만 표기) */}
                         <td className="py-3.5 px-4">
-                          <span className={`font-bold text-xs font-mono ${burnRateColor.text}`}>
+                          <span className="font-bold font-mono text-rose-600">
                             {formatPercent(burnRate)}
                           </span>
                         </td>
@@ -1267,72 +1178,17 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
         )}
       </div>
 
-      {/* 3. 대시보드 시각화 차트: 조직별 예산 배정액 vs 사용실적 비교 분석 (제일 하단 배치) */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 mb-3 border-b border-slate-100 gap-2">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <BarChart3 className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">조직별 예산 배정액 vs 사용실적 비교 분석</h3>
-              <p className="text-xs text-slate-500">각 조직(기업)의 총 예산 규모와 실제 포인트 사용 실적을 직관적으로 비교합니다.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500 font-medium">총 {chartData.length}개 조직 집계 완료</span>
-          </div>
-        </div>
-
-        <div className="h-72 sm:h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 10, right: 20, left: 10, bottom: 25 }}
-              barGap={3}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis
-                dataKey="name"
-                interval={0}
-                height={50}
-                tick={renderOrgChartXAxisTick}
-                axisLine={{ stroke: '#cbd5e1' }}
-                tickLine={false}
-              />
-              <YAxis
-                tickFormatter={val => `${(val / 10000).toLocaleString()}만`}
-                tick={{ fontSize: 11, fill: '#64748b' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                formatter={(val: any, name: any) => [formatPoints(Number(val)), name]}
-                labelFormatter={(label, payload) => {
-                  if (payload && payload[0]) {
-                    const row = payload[0].payload;
-                    return `${row.fullName} (소속 ${row.인원수}명, 사용률 ${formatPercent(row.사용률)})`;
-                  }
-                  return label;
-                }}
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  fontSize: '12px',
-                }}
-              />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                wrapperStyle={{ paddingBottom: '10px', fontSize: '11px' }}
-              />
-              <Bar dataKey="배정예산" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={36} />
-              <Bar dataKey="사용실적" fill="#e11d48" radius={[4, 4, 0, 0]} maxBarSize={36} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Bottom: Excel Export */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleDownloadPointUsageExcel}
+          className="px-3.5 py-2 text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          title="포인트 사용 실적 엑셀 다운로드"
+        >
+          <Download className="w-4 h-4 text-slate-600" />
+          <span>포인트 사용 실적 내려받기</span>
+        </button>
       </div>
     </div>
   );

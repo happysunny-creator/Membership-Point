@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Category,
   CategoryId,
@@ -11,10 +11,9 @@ import {
   BudgetSummary,
   MainTab,
   SystemSettings,
-  OrgCategory,
 } from './types';
-import { CATEGORIES, INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS, INITIAL_ORG_CATEGORIES } from './data/mockData';
-import { calculateBurnRate, exportToCSV, formatPoints, getCustomerStatusFromBurnRate } from './utils/formatters';
+import { CATEGORIES, INITIAL_CUSTOMERS, INITIAL_TRANSACTIONS } from './data/mockData';
+import { calculateBurnRate, exportToCSV, formatPoints, getCustomerStatusFromBurnRate, setCurrencyUnit } from './utils/formatters';
 
 import { Navbar } from './components/Navbar';
 import { StatSummaryCards } from './components/StatSummaryCards';
@@ -57,10 +56,14 @@ export default function App() {
   // 1. Core State
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
-  const [orgCategories, setOrgCategories] = useState<OrgCategory[]>(INITIAL_ORG_CATEGORIES);
   const [activeTab, setActiveTab] = useState<MainTab>('budget');
   const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Keep the point/currency unit used by formatPoints() in sync with settings
+  useEffect(() => {
+    setCurrencyUnit(settings.currencyUnit);
+  }, [settings.currencyUnit]);
 
   // 2. Filter State
   const [filterState, setFilterState] = useState<FilterState>({
@@ -464,9 +467,9 @@ export default function App() {
 
   // Reset to sample data
   const handleResetData = () => {
-    if (confirm('샘플 데모 데이터로 초기화하시겠습니까?')) {
-      setCustomers(INITIAL_CUSTOMERS);
-      setTransactions(INITIAL_TRANSACTIONS);
+    if (confirm('회원 정보와 사용 실적 등 모든 데이터를 삭제하고 빈 상태로 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      setCustomers([]);
+      setTransactions([]);
       handleResetFilters();
     }
   };
@@ -614,45 +617,9 @@ export default function App() {
   const handleDeleteCustomer = (customerId: string) => {
     const target = customers.find(c => c.id === customerId);
     setCustomers(prev => prev.filter(c => c.id !== customerId));
-    setToastMessage(`[${target?.name || '회원'}] 이(가) 삭제되었습니다.`);
+    setTransactions(prev => prev.filter(t => t.customerId !== customerId));
+    setToastMessage(`[${target?.name || '회원'}] 회원 정보와 관련 거래 내역이 모두 삭제되었습니다.`);
     setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  // Org Category Handlers
-  const handleAddOrgCategory = (newCatData: Omit<OrgCategory, 'id' | 'updatedAt'>) => {
-    const now = new Date();
-    const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const newCat: OrgCategory = {
-      ...newCatData,
-      id: `ORGCAT-${Date.now()}`,
-      updatedAt: formattedDate,
-    };
-    setOrgCategories(prev => [newCat, ...prev]);
-    setToastMessage(`[${newCat.company}] ${newCat.categoryName} 카테고리가 등록되었습니다.`);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  const handleUpdateOrgCategory = (updatedCat: OrgCategory) => {
-    setOrgCategories(prev => prev.map(c => (c.id === updatedCat.id ? updatedCat : c)));
-    setToastMessage(`[${updatedCat.categoryName}] 카테고리 정보가 저장되었습니다.`);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  const handleDeleteOrgCategory = (categoryId: string) => {
-    const target = orgCategories.find(c => c.id === categoryId);
-    setOrgCategories(prev => prev.filter(c => c.id !== categoryId));
-    setToastMessage(`[${target?.categoryName || '카테고리'}] 가 삭제되었습니다.`);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  const handleImportOrgCategories = (imported: OrgCategory[], mode: 'append' | 'replace') => {
-    if (mode === 'replace') {
-      setOrgCategories(imported);
-    } else {
-      setOrgCategories(prev => [...imported, ...prev]);
-    }
-    setToastMessage(`총 ${imported.length}건의 조직별 카테고리가 엑셀로 등록되었습니다.`);
-    setTimeout(() => setToastMessage(null), 4000);
   };
 
   // Export CSV
@@ -699,7 +666,6 @@ export default function App() {
           setIsAddTransactionOpen(true);
         }}
         onOpenExcelUpload={() => setIsExcelUploadOpen(true)}
-        onExportCSV={handleExportCSV}
         onResetData={handleResetData}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -718,6 +684,7 @@ export default function App() {
               onBatchAddCustomers={handleSaveBatchCustomers}
               onUpdateCustomer={handleUpdateCustomer}
               onDeleteCustomer={handleDeleteCustomer}
+              onAdjustBudget={handleAdjustBudget}
             />
           </div>
         )}
@@ -841,12 +808,6 @@ export default function App() {
               setToastMessage('시스템 및 운영 정책 설정이 저장되었습니다.');
               setTimeout(() => setToastMessage(null), 4000);
             }}
-            categories={CATEGORIES}
-            orgCategories={orgCategories}
-            onAddOrgCategory={handleAddOrgCategory}
-            onUpdateOrgCategory={handleUpdateOrgCategory}
-            onDeleteOrgCategory={handleDeleteOrgCategory}
-            onImportOrgCategories={handleImportOrgCategories}
             customers={customers}
             onAddCustomer={handleSaveCustomer}
             onBatchAddCustomers={handleSaveBatchCustomers}
@@ -886,7 +847,6 @@ export default function App() {
           setTargetCustomerForModal(null);
         }}
         customers={customers}
-        categories={CATEGORIES}
         targetCustomer={targetCustomerForModal}
         onSaveTransaction={handleSaveTransaction}
       />

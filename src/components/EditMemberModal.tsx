@@ -135,7 +135,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             </div>
           </div>
 
-          {/* Row 2: 성함 & 직책 */}
+          {/* Row 2: 성함 & 직위 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1">
               <label className="font-bold text-slate-800 flex items-center gap-1">
@@ -153,7 +153,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
             <div className="space-y-1">
               <label className="font-semibold text-slate-700 flex items-center gap-1">
                 <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                <span>직책</span>
+                <span>직위</span>
               </label>
               <input
                 type="text"
@@ -174,7 +174,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                   <span>배정포인트 (P) *</span>
                 </label>
                 {typeof totalBudget === 'number' && totalBudget > 0 && (
-                  <span className="text-[11px] font-bold text-blue-700">
+                  <span className="text-[11px] font-bold text-slate-900">
                     {formatPoints(totalBudget)}
                   </span>
                 )}
@@ -184,7 +184,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                 value={totalBudget}
                 onChange={e => setTotalBudget(e.target.value === '' ? '' : Number(e.target.value))}
                 min="0"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold text-blue-700 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 required
               />
             </div>

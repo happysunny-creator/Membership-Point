@@ -180,8 +180,9 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
           <div className="h-7 w-px bg-slate-200 hidden sm:block" />
           <div className="px-2">
             <span className="text-slate-400 block text-[11px] font-medium">총 누적 사용실적</span>
-            <span className="font-extrabold text-indigo-700 text-sm">
-              {formatPoints(orgAnalytics.totalUsedSum)} ({formatPercent(orgAnalytics.overallRate)})
+            <span className="font-extrabold text-sm">
+              <span className="text-blue-600">{formatPoints(orgAnalytics.totalUsedSum)}</span>{' '}
+              <span className="text-rose-600">({formatPercent(orgAnalytics.overallRate)})</span>
             </span>
           </div>
           <div className="h-7 w-px bg-slate-200 hidden sm:block" />
@@ -237,12 +238,12 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
                   </div>
 
                   <span
-                    className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                    className={`text-xs font-bold text-rose-600 px-2.5 py-1 rounded-full shrink-0 ${
                       org.burnRate >= 80
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        ? 'bg-rose-50 border border-rose-200'
                         : org.burnRate >= 50
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'bg-emerald-50 border border-emerald-200'
                     }`}
                   >
                     사용률 {formatPercent(org.burnRate)}
@@ -253,7 +254,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
                 <div className="bg-slate-50/90 rounded-xl p-3.5 border border-slate-100 space-y-2.5">
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs font-medium text-slate-500">누적 포인트 사용실적</span>
-                    <span className="text-base font-extrabold text-slate-900">
+                    <span className="text-base font-extrabold text-blue-600">
                       {formatPoints(org.usedPoints)}
                     </span>
                   </div>
@@ -269,8 +270,8 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
                       />
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                      <span>배정 예산: {formatPoints(org.totalBudget)}</span>
-                      <span>잔여: {formatPoints(org.remainingPoints)}</span>
+                      <span>배정 예산: <span className="text-slate-900">{formatPoints(org.totalBudget)}</span></span>
+                      <span>잔여: <span className="text-emerald-600">{formatPoints(org.remainingPoints)}</span></span>
                     </div>
                   </div>
                 </div>

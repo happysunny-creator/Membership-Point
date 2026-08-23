@@ -1,7 +1,16 @@
 import { CustomerStatus, CustomerTier, TransactionType } from '../types';
 
+// Currency/unit label used by formatPoints, kept in sync with SystemSettings.currencyUnit
+// via setCurrencyUnit() so every point amount in the app reflects the configured unit
+// without needing to thread `settings` through every call site.
+let currentCurrencyUnit = 'P';
+
+export function setCurrencyUnit(unit: string): void {
+  currentCurrencyUnit = unit && unit.trim() ? unit.trim() : 'P';
+}
+
 export function formatPoints(value: number): string {
-  return new Intl.NumberFormat('ko-KR').format(value) + ' P';
+  return new Intl.NumberFormat('ko-KR').format(value) + ' ' + currentCurrencyUnit;
 }
 
 export function formatNumber(value: number): string {

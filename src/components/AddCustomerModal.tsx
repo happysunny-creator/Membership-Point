@@ -73,7 +73,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [company, setCompany] = useState(''); // 조직명
   const [department, setDepartment] = useState(''); // 소속
   const [name, setName] = useState(''); // 성함
-  const [position, setPosition] = useState(''); // 직책 (별도 셀)
+  const [position, setPosition] = useState(''); // 직위 (별도 셀)
   const [manager, setManager] = useState(''); // 담당자
   const [budget, setBudget] = useState<number | ''>(5000000); // 금액
   const [notes, setNotes] = useState(''); // 비고 및 관리메모
@@ -253,7 +253,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <p className="text-xs text-slate-500">
                 {mode === 'excel'
                   ? '엑셀 파일(.xlsx)을 업로드하여 다수의 조직 및 회원을 한 번에 등록하고 포인트를 배정합니다.'
-                  : '조직 정보, 직책 및 초기 포인트 배정 예산을 등록합니다.'}
+                  : '조직 정보, 직위 및 초기 포인트 배정 예산을 등록합니다.'}
               </p>
             </div>
           </div>
@@ -301,7 +301,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               </div>
             </div>
 
-            {/* Row 2: 성함 & 직책 (별도 셀) */}
+            {/* Row 2: 성함 & 직위 (별도 셀) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -321,7 +321,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-800 flex items-center gap-1.5">
                   <BadgeCheck className="w-3.5 h-3.5 text-teal-600" />
-                  <span>직책</span>
+                  <span>직위</span>
                 </label>
                 <input
                   type="text"
@@ -356,7 +356,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   <span>금액 (배정 포인트) *</span>
                 </label>
                 {typeof budget === 'number' && budget > 0 && (
-                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                     {formatPoints(budget)}
                   </span>
                 )}
@@ -505,7 +505,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 회원 등록 엑셀 파일을 드래그하거나 클릭하여 선택하세요
               </div>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                필수 열: <strong className="text-slate-700">조직명, 소속, 성함, 직책, 담당자, 금액, 비고및관리메모</strong>
+                필수 열: <strong className="text-slate-700">조직명, 소속, 성함, 직위, 담당자, 금액, 비고및관리메모</strong>
               </p>
               <span className="inline-block mt-3 px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-md font-medium text-[11px] shadow-2xs">
                 지원 확장자: .xlsx, .xls, .csv
@@ -547,7 +547,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         오류 데이터: {excelResult.invalidRowsCount}건
                       </span>
                     )}
-                    <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    <span className="text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       총 배정액: {formatPoints(excelResult.totalBudget)}
                     </span>
                   </div>
@@ -572,7 +572,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           </div>
                         </th>
                         <th className="py-2 px-3">성함</th>
-                        <th className="py-2 px-3">직책</th>
+                        <th className="py-2 px-3">직위</th>
                         <th className="py-2 px-3">담당자</th>
                         <th className="py-2 px-3 text-right">배정 금액</th>
                         <th className="py-2 px-3">상태 / 비고</th>
@@ -587,7 +587,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           <td className="py-2 px-3 font-bold text-slate-900">{row.name}</td>
                           <td className="py-2 px-3 text-slate-600">{row.position || '-'}</td>
                           <td className="py-2 px-3 text-slate-600">{row.manager || '운영관리팀'}</td>
-                          <td className="py-2 px-3 text-right font-bold text-blue-600">
+                          <td className="py-2 px-3 text-right font-bold text-slate-900">
                             {formatPoints(row.budget)}
                           </td>
                           <td className="py-2 px-3">

@@ -152,7 +152,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <PieChart className="w-3.5 h-3.5 text-rose-500" />
                 총 포인트 사용실적
               </span>
-              <div className="text-lg sm:text-xl font-extrabold text-rose-600 mt-1">
+              <div className="text-lg sm:text-xl font-extrabold text-blue-600 mt-1">
                 {formatPoints(customer.usedPoints)}
               </div>
             </div>
@@ -174,7 +174,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
                 사용률
               </span>
-              <div className={`text-lg sm:text-xl font-extrabold mt-1 ${burnColor.text}`}>
+              <div className="text-lg sm:text-xl font-extrabold mt-1 text-rose-600">
                 {formatPercent(burnRate)}
               </div>
             </div>
@@ -184,7 +184,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold">
               <span className="text-slate-700">포인트 예산 사용률 현황</span>
-              <span className={burnColor.text}>
+              <span className="text-rose-600">
                 {formatPercent(burnRate)} 사용 (잔여: {formatPoints(customer.remainingPoints)})
               </span>
             </div>

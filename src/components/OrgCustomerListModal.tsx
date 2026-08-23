@@ -112,13 +112,13 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                배정 예산: <strong className="text-slate-800">{formatPoints(orgTotals.totalBudget)}</strong>
+                배정 예산: <strong className="text-slate-900">{formatPoints(orgTotals.totalBudget)}</strong>
                 <span className="mx-1.5">·</span>
-                사용 실적: <strong className="text-rose-600">{formatPoints(orgTotals.totalUsed)}</strong>
+                사용 실적: <strong className="text-blue-600">{formatPoints(orgTotals.totalUsed)}</strong>
                 <span className="mx-1.5">·</span>
                 잔여: <strong className="text-emerald-600">{formatPoints(orgTotals.totalRemaining)}</strong>
                 <span className="mx-1.5">·</span>
-                사용률: <strong className="text-slate-800">{formatPercent(orgTotals.burnRate)}</strong>
+                사용률: <strong className="text-rose-600">{formatPercent(orgTotals.burnRate)}</strong>
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="회원명, 직책, 부서 검색..."
+                  placeholder="회원명, 직위, 부서 검색..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
@@ -167,7 +167,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold z-10">
                     <tr>
-                      <th className="py-2.5 px-4">성함 / 직책</th>
+                      <th className="py-2.5 px-4">성함 / 직위</th>
                       <th className="py-2.5 px-3">
                         <div className="flex items-center gap-1">
                           <Network className="w-3 h-3 text-cyan-600" />
@@ -208,25 +208,18 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                             }`}
                           >
                             <td className="py-2.5 px-4">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-7 h-7 rounded-lg bg-gradient-to-tr ${member.avatarColor} text-white flex items-center justify-center text-[11px] font-bold shrink-0 shadow-2xs`}
-                                >
-                                  {cleanName.slice(0, 2)}
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-900">{cleanName}</span>
+                                  {cleanPos && (
+                                    <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                                      {cleanPos}
+                                    </span>
+                                  )}
                                 </div>
-                                <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-slate-900">{cleanName}</span>
-                                    {cleanPos && (
-                                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
-                                        {cleanPos}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    ID: {member.id}
-                                  </span>
-                                </div>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  ID: {member.id}
+                                </span>
                               </div>
                             </td>
                             <td className="py-2.5 px-3 text-slate-600">
@@ -235,10 +228,10 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                                 <span>{member.department || '-'}</span>
                               </div>
                             </td>
-                            <td className="py-2.5 px-4 text-right font-semibold text-slate-800">
+                            <td className="py-2.5 px-4 text-right font-semibold text-slate-900">
                               {formatPoints(member.totalBudget)}
                             </td>
-                            <td className="py-2.5 px-4 text-right font-bold text-rose-600">
+                            <td className="py-2.5 px-4 text-right font-bold text-blue-600">
                               {formatPoints(member.usedPoints)}
                             </td>
                             <td className="py-2.5 px-4 text-right font-bold text-emerald-600">
@@ -252,7 +245,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                                     style={{ width: `${Math.min(memberBurnRate, 100)}%` }}
                                   />
                                 </div>
-                                <span className={`text-[11px] font-bold ${burnColor.text}`}>
+                                <span className="text-[11px] font-bold text-rose-600">
                                   {formatPercent(memberBurnRate)}
                                 </span>
                               </div>
@@ -295,7 +288,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                 <div className="flex items-center gap-3 text-xs text-slate-500">
                   <span>
                     총 사용:{' '}
-                    <strong className="text-rose-600 font-bold">
+                    <strong className="text-blue-600 font-bold">
                       {formatPoints(activeCustomer.usedPoints)}
                     </strong>
                   </span>
