@@ -51,11 +51,19 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
   const [currentPage, setCurrentPage] = useState(1);
   const [nameSearchQuery, setNameSearchQuery] = useState('');
 
+  // This table is 포인트 "사용" 및 "실적" 내역 — it must only ever reflect performance actually
+  // entered here (실적 직접 등록 / 실적 엑셀 업로드), not the 초기 예산 배정/조정 transactions that
+  // 회원 등록·포인트 배정 관리 silently generates elsewhere in the same shared transactions list.
+  const performanceTransactions = useMemo(
+    () => transactions.filter(t => t.type !== 'BUDGET_ALLOCATION'),
+    [transactions]
+  );
+
   // Quickly find a member's records by name — searches the cleaned display name
   const visibleTransactions = useMemo(() => {
     const q = nameSearchQuery.trim().toLowerCase();
-    if (!q) return transactions;
-    return transactions.filter(t => {
+    if (!q) return performanceTransactions;
+    return performanceTransactions.filter(t => {
       const matchedCust = customers.find(c => c.id === t.customerId || c.name === t.customerName);
       const { name } = separateNameAndPosition(
         t.customerName || matchedCust?.name || '',
@@ -63,7 +71,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
       );
       return name.toLowerCase().includes(q);
     });
-  }, [transactions, customers, nameSearchQuery]);
+  }, [performanceTransactions, customers, nameSearchQuery]);
 
   // Filters/search change the visible list identity — always land back on page 1
   useEffect(() => {
