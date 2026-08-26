@@ -465,7 +465,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                   <option value="all">전체 조직 ({orgGroups.length}개 조직 · {customers.length}명)</option>
                   {orgGroups.map(og => (
                     <option key={og.company} value={og.company}>
-                      {og.company} ({og.customers.length}명 · {formatPercent(og.burnRate)})
+                      {og.company} ({og.customers.length}명)
                     </option>
                   ))}
                 </select>
