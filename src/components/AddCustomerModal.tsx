@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
+  Mail,
 } from 'lucide-react';
 import { formatPoints } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
@@ -74,6 +75,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [name, setName] = useState(''); // 성함
   const [position, setPosition] = useState(''); // 직위 (별도 셀)
   const [manager, setManager] = useState(''); // 담당자
+  const [managerEmail, setManagerEmail] = useState(''); // 담당자 이메일
   const [budget, setBudget] = useState<number | ''>(1000000); // 금액
   const [notes, setNotes] = useState(''); // 비고 및 관리메모
 
@@ -117,6 +119,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       name: cleanName.trim(),
       position: cleanPos.trim(),
       manager: manager.trim() || '운영관리팀',
+      managerEmail: managerEmail.trim(),
       email: `${cleanName.trim().toLowerCase().replace(/\s+/g, '')}@${company.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'corp'}.com`,
       phone: '010-0000-0000',
       tier: numBudget >= 15000000 ? 'VIP' : numBudget >= 8000000 ? 'Gold' : 'Silver',
@@ -139,6 +142,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setName('');
     setPosition('');
     setManager('');
+    setManagerEmail('');
     setBudget(1000000);
     setNotes('');
   };
@@ -202,6 +206,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         name: r.name.trim(),
         position: r.position.trim(),
         manager: r.manager.trim() || '운영관리팀',
+        managerEmail: r.managerEmail.trim(),
         email: `${r.name.trim().toLowerCase().replace(/\s+/g, '')}@${r.company.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'corp'}.com`,
         phone: '010-0000-0000',
         tier: numBudget >= 15000000 ? 'VIP' : numBudget >= 8000000 ? 'Gold' : 'Silver',
@@ -332,19 +337,35 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               </div>
             </div>
 
-            {/* Row 3: 담당자 */}
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-800 flex items-center gap-1.5">
-                <UserCheck className="w-3.5 h-3.5 text-purple-600" />
-                <span>담당자</span>
-              </label>
-              <input
-                type="text"
-                value={manager}
-                onChange={e => setManager(e.target.value)}
-                placeholder="예: 박운영 / B2B운영팀"
-                className="w-full px-3 py-2 bg-slate-50/70 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              />
+            {/* Row 3: 담당자 & 담당자 이메일 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-purple-600" />
+                  <span>담당자</span>
+                </label>
+                <input
+                  type="text"
+                  value={manager}
+                  onChange={e => setManager(e.target.value)}
+                  placeholder="예: 박운영 / B2B운영팀"
+                  className="w-full px-3 py-2 bg-slate-50/70 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-purple-600" />
+                  <span>담당자 이메일</span>
+                </label>
+                <input
+                  type="email"
+                  value={managerEmail}
+                  onChange={e => setManagerEmail(e.target.value)}
+                  placeholder="예: pm.woonyoung@company.com"
+                  className="w-full px-3 py-2 bg-slate-50/70 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                />
+              </div>
             </div>
 
             {/* Row 4: 금액 (배정 포인트 예산) */}
@@ -505,7 +526,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 회원 등록 엑셀 파일을 드래그하거나 클릭하여 선택하세요
               </div>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                필수 열: <strong className="text-slate-700">조직명, 소속, 성함, 직위, 담당자, 금액, 비고및관리메모</strong>
+                필수 열: <strong className="text-slate-700">조직명, 소속, 성함, 직위, 담당자, 담당자이메일, 금액, 비고및관리메모</strong>
               </p>
               <span className="inline-block mt-3 px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded-md font-medium text-[11px] shadow-2xs">
                 지원 확장자: .xlsx, .xls, .csv
@@ -574,6 +595,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <th className="py-2 px-3">성함</th>
                         <th className="py-2 px-3">직위</th>
                         <th className="py-2 px-3">담당자</th>
+                        <th className="py-2 px-3">담당자이메일</th>
                         <th className="py-2 px-3 text-right">배정 금액</th>
                         <th className="py-2 px-3">상태 / 비고</th>
                       </tr>
@@ -587,6 +609,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                           <td className="py-2 px-3 font-bold text-slate-900">{row.name}</td>
                           <td className="py-2 px-3 text-slate-600">{row.position || '-'}</td>
                           <td className="py-2 px-3 text-slate-600">{row.manager || '운영관리팀'}</td>
+                          <td className="py-2 px-3 text-slate-600">{row.managerEmail || '-'}</td>
                           <td className="py-2 px-3 text-right font-extrabold text-slate-900">
                             {formatPoints(row.budget)}
                           </td>

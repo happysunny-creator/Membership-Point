@@ -13,6 +13,7 @@ import {
   Wallet,
   FileText,
   UserCheck,
+  Mail,
 } from 'lucide-react';
 
 interface EditMemberModalProps {
@@ -33,6 +34,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   const [name, setName] = useState('');
   const [position, setPosition] = useState('');
   const [manager, setManager] = useState('');
+  const [managerEmail, setManagerEmail] = useState('');
   const [totalBudget, setTotalBudget] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
 
@@ -47,6 +49,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
       setName(separatedName);
       setPosition(separatedPos);
       setManager(customer.manager || '');
+      setManagerEmail(customer.managerEmail || '');
       setTotalBudget(customer.totalBudget !== undefined ? customer.totalBudget : '');
       setNotes(customer.notes || '');
     }
@@ -72,6 +75,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
       name: cleanName.trim(),
       position: cleanPos.trim(),
       manager: manager.trim() || '운영관리팀',
+      managerEmail: managerEmail.trim(),
       totalBudget: budgetNum,
       remainingPoints: newRemaining,
       notes: notes.trim(),
@@ -202,6 +206,21 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
+          </div>
+
+          {/* Row 3b: 담당자 이메일 */}
+          <div className="space-y-1">
+            <label className="font-semibold text-slate-700 flex items-center gap-1">
+              <Mail className="w-3.5 h-3.5 text-purple-600" />
+              <span>담당자 이메일</span>
+            </label>
+            <input
+              type="email"
+              value={managerEmail}
+              onChange={e => setManagerEmail(e.target.value)}
+              placeholder="예: pm.woonyoung@company.com"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
           </div>
 
           {/* Row 4: 비고 및 메모 */}

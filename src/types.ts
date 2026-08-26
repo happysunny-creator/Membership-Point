@@ -22,6 +22,7 @@ export interface Customer {
   company: string;
   department: string;
   manager?: string; // 담당자
+  managerEmail?: string; // 담당자 이메일
   tier: CustomerTier;
   totalBudget: number; // Total allocated point budget
   usedPoints: number;  // Used points to date

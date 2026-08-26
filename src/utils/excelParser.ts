@@ -473,6 +473,7 @@ export interface ParsedCustomerRow {
   name: string;
   position: string;
   manager: string;
+  managerEmail: string;
   budget: number;
   notes: string;
   isValid: boolean;
@@ -497,6 +498,7 @@ export function downloadCustomerExcelTemplate(): void {
       성함: '김민수',
       직위: '팀장',
       담당자: '박운영',
+      담당자이메일: 'pw.park@company.com',
       금액: 5000000,
       비고및관리메모: '2026 하반기 부서 복지 및 워크숍 포인트 배정',
     },
@@ -506,6 +508,7 @@ export function downloadCustomerExcelTemplate(): void {
       성함: '이지은',
       직위: '수석연구원',
       담당자: '정운영',
+      담당자이메일: 'wy.jung@company.com',
       금액: 8000000,
       비고및관리메모: '전략 프로젝트 우수 성과 리워드 배정',
     },
@@ -515,6 +518,7 @@ export function downloadCustomerExcelTemplate(): void {
       성함: '박준호',
       직위: '팀장',
       담당자: '김운영',
+      담당자이메일: 'wy.kim@company.com',
       금액: 6000000,
       비고및관리메모: '개발팀 직무도서 및 디지털 교육 지원',
     },
@@ -524,6 +528,7 @@ export function downloadCustomerExcelTemplate(): void {
       성함: '정우진',
       직위: '책임연구원',
       담당자: '박운영',
+      담당자이메일: 'pw.park@company.com',
       금액: 7500000,
       비고및관리메모: 'AI 모델 연구 및 글로벌 컨퍼런스 포인트',
     },
@@ -537,6 +542,7 @@ export function downloadCustomerExcelTemplate(): void {
     { wch: 14 }, // 성함
     { wch: 14 }, // 직위
     { wch: 18 }, // 담당자
+    { wch: 24 }, // 담당자이메일
     { wch: 16 }, // 금액
     { wch: 40 }, // 비고및관리메모
   ];
@@ -557,6 +563,7 @@ export function downloadCustomerDataExcel(customers: Customer[]): void {
       성함: name,
       직위: position || '',
       담당자: c.manager || '',
+      담당자이메일: c.managerEmail || '',
       배정포인트: c.totalBudget,
       사용실적: c.usedPoints,
       잔여포인트: c.remainingPoints,
@@ -574,6 +581,7 @@ export function downloadCustomerDataExcel(customers: Customer[]): void {
     { wch: 14 }, // 성함
     { wch: 14 }, // 직위
     { wch: 18 }, // 담당자
+    { wch: 24 }, // 담당자이메일
     { wch: 16 }, // 배정포인트
     { wch: 16 }, // 사용실적
     { wch: 16 }, // 잔여포인트
@@ -632,6 +640,7 @@ export async function parseCustomerExcelFile(file: File): Promise<CustomerExcelI
           const rawPosition = getVal(['직책', '직급', '직위', '직함', 'position', 'title', 'role']);
           const { name, position } = separateNameAndPosition(rawName, rawPosition);
           const manager = getVal(['비서(담당자)', '비서', '담당비서', '비서담당자', '담당자', '관리자', '운영자', '배정자', 'secretary', 'assistant', 'manager', 'admin']);
+          const managerEmail = getVal(['담당자이메일', '담당자 이메일', '담당자메일', '담당자email', '비서이메일', '이메일', '이메일주소', 'manageremail', 'email']);
           const budgetRaw = getVal(['금액', '배정금액', '포인트', '배정포인트', '예산', 'budget', 'amount', 'points']);
           const notes = getVal(['비고및관리메모', '비고', '메모', '관리메모', '특이사항', 'notes', 'memo', 'comment']);
 
@@ -662,6 +671,7 @@ export async function parseCustomerExcelFile(file: File): Promise<CustomerExcelI
             name: name || `회원-${index + 1}`,
             position: position || '',
             manager: manager || '운영관리팀',
+            managerEmail: managerEmail || '',
             budget: budget,
             notes: notes || '',
             isValid,
