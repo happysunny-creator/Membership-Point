@@ -49,10 +49,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   onOpenAddTransactionForCustomer,
   onOpenAdjustBudgetForCustomer,
 }) => {
-  // 실적 기준일 선택 — 'latest'는 현재(최신) 누적 실적을 그대로 보여주고, 특정 날짜를
-  // 고르면 그 날짜까지 발생한 거래만 반영해 배정 예산·사용 실적·잔여·사용률을 재계산한다.
-  const [asOfDate, setAsOfDate] = useState<string>('latest');
-
   // 선택 가능한 기준일 목록: 실제 사용(SPEND) 실적이 발생한 날짜만 최신순으로 제공
   const availableAsOfDates = useMemo(() => {
     const dates = new Set<string>();
@@ -62,13 +58,17 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     return Array.from(dates).sort((a, b) => b.localeCompare(a));
   }, [transactions]);
 
+  // 실적 기준일 선택 — 기본값은 실적이 업로드된 가장 최근 날짜(목록 맨 위). 다른 날짜를
+  // 고르면 그 날짜까지 발생한 거래만 반영해 배정 예산·사용 실적·잔여·사용률을 재계산한다.
+  const [asOfDate, setAsOfDate] = useState<string>(() => availableAsOfDates[0] || '');
+
   // 선택한 기준일까지의 거래만 반영한 회원별 배정 예산·사용 실적·잔여 포인트.
   // 사용 실적은 기준일이 속한 해의 1월 1일부터 기준일까지 누적한 값이다 (월별 포인트
   // 소진 추이 차트와 동일한 "연초부터 누적" 방식). 배정 예산은 "현재 배정액 - 기준일
   // 이후에 발생한 배정" 방식으로 계산해, 기준일 이전에 배정 거래 기록이 없는 회원도
   // 자연스럽게 현재 배정액을 그대로 유지하도록 한다.
   const effectiveCustomers = useMemo(() => {
-    if (asOfDate === 'latest') return customers;
+    if (!asOfDate) return customers;
 
     const yearStart = `${asOfDate.slice(0, 4)}-01-01`;
     const futureAllocationMap: Record<string, number> = {};
@@ -242,7 +242,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   }, [orgGroups, selectedOrgFilter]);
 
   // 전체 조직 통합 지표 — 기준일 재계산과 항상 일치하도록 summary prop 대신
-  // effectiveCustomers에서 직접 합산한다 (기준일이 'latest'일 때는 summary와 동일한 값)
+  // effectiveCustomers에서 직접 합산한다
   const overallMetrics = useMemo(() => {
     const totalBudget = effectiveCustomers.reduce((acc, c) => acc + c.totalBudget, 0);
     const totalUsed = effectiveCustomers.reduce((acc, c) => acc + c.usedPoints, 0);
@@ -412,15 +412,17 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     }
   };
 
+  const latestAsOfDate = availableAsOfDates[0] || '';
+
   const isAnyFilterActive =
-    selectedOrgFilter !== 'all' || selectedDeptFilter !== 'all' || statusFilter !== 'all' || searchTerm !== '' || asOfDate !== 'latest';
+    selectedOrgFilter !== 'all' || selectedDeptFilter !== 'all' || statusFilter !== 'all' || searchTerm !== '' || asOfDate !== latestAsOfDate;
 
   const handleResetFilters = () => {
     setSelectedOrgFilter('all');
     setSelectedDeptFilter('all');
     setStatusFilter('all');
     setSearchTerm('');
-    setAsOfDate('latest');
+    setAsOfDate(latestAsOfDate);
   };
 
   return (
@@ -560,12 +562,11 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                   value={asOfDate}
                   onChange={e => setAsOfDate(e.target.value)}
                   className={`w-full h-9 appearance-none pl-3 pr-8 border rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    asOfDate !== 'latest'
+                    asOfDate !== latestAsOfDate
                       ? 'bg-blue-50 border-blue-300 text-blue-900 ring-2 ring-blue-500/10'
                       : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-800'
                   }`}
                 >
-                  <option value="latest">전체 실적 (최신 기준)</option>
                   {availableAsOfDates.map(d => (
                     <option key={d} value={d}>
                       {d} 기준
