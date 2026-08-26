@@ -208,7 +208,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               type="text"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="예: 3분기 사내 스터디 도서 구매 및 커피 쿠폰 정산"
+              placeholder="예: 다이닝룸 이용, 연회장 이용, 기프트 이용"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:ring-1 focus:ring-blue-500"
             />
           </div>
