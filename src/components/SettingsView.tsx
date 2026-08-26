@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Customer, SystemSettings } from '../types';
 import { downloadExcelTemplate, parseOrgNameExcelFile, downloadOrgNameExcelTemplate, downloadCustomerExcelTemplate } from '../utils/excelParser';
+import { buildManagerSummaries, buildManagerMailtoLink } from '../utils/managerMailto';
+import { formatPoints, formatPercent } from '../utils/formatters';
 import { AddCustomerModal } from './AddCustomerModal';
 import {
   Settings,
@@ -24,6 +26,8 @@ import {
   X,
   FileText,
   FileDown,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -84,6 +88,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setIsCurrencyUnitSaved(true);
     setTimeout(() => setIsCurrencyUnitSaved(false), 3000);
   };
+
+  // 담당자별 실적 안내 이메일 초안 작성용 요약 (보고서 관리 탭)
+  const managerSummaries = useMemo(() => buildManagerSummaries(customers), [customers]);
 
   // Organization display priority order (조직 표시 우선순위)
   const uniqueCompanies = useMemo(() => {
@@ -1129,6 +1136,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <p className="text-[11px] text-slate-400">
             조직별 배정·사용 실적 요약과 회원별 포인트 사용 현황을 담은 보고서입니다. 인터넷 연결 없이 열람·공유할 수 있어 상사 보고용으로 바로 활용할 수 있습니다. HTML·PDF 모두 대화상자 없이 바로 파일로 저장됩니다.
           </p>
+
+          <div className="pt-5 border-t border-slate-100 space-y-3">
+            <div className="flex items-center space-x-2.5">
+              <Mail className="w-4 h-4 text-indigo-600" />
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">담당자별 실적 안내</h4>
+                <p className="text-[11px] text-slate-500">
+                  담당자별로 담당 회원의 포인트 사용 실적을 정리한 이메일 초안을 작성합니다. 초안만 열리며, 발송은 직접 눌러야 합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <th className="py-2 px-3 font-semibold">담당자</th>
+                    <th className="py-2 px-3 font-semibold">담당 회원</th>
+                    <th className="py-2 px-3 font-semibold text-right">총 배정</th>
+                    <th className="py-2 px-3 font-semibold text-right">총 사용</th>
+                    <th className="py-2 px-3 font-semibold text-right">사용률</th>
+                    <th className="py-2 px-3 font-semibold text-center">안내</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {managerSummaries.map(summary => (
+                    <tr key={summary.manager} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-slate-800">{summary.manager}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{summary.members.length}명</td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-slate-700">{formatPoints(summary.totalBudget)}</td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-blue-700">{formatPoints(summary.totalUsed)}</td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-slate-700">{formatPercent(summary.burnRate)}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        {summary.managerEmail ? (
+                          <a
+                            href={buildManagerMailtoLink(summary)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg font-bold transition-colors"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>이메일 안내 작성</span>
+                          </a>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg font-semibold cursor-not-allowed"
+                            title="이 담당자의 이메일이 회원 정보에 등록되어 있지 않습니다."
+                          >
+                            이메일 미등록
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
