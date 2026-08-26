@@ -165,45 +165,6 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
   const latestData = monthlyTrendData[monthlyTrendData.length - 1];
 
-  // 조직별 사용 비중 도넛 바깥쪽 둘레에 조직명과 사용률(burnRate)을 안내선과 함께
-  // 짙은 회색으로 표기하는 커스텀 라벨 — 사용률은 조직명 바로 아래 줄에 함께 표시
-  const RADIAN = Math.PI / 180;
-  const renderOrgBurnRateLabel = (props: any) => {
-    const { cx, cy, midAngle, outerRadius, name, burnRate } = props;
-
-    const lineStartRadius = outerRadius + 4;
-    const lineBendRadius = outerRadius + 14;
-    const labelRadius = outerRadius + 17;
-    const cos = Math.cos(-midAngle * RADIAN);
-    const sin = Math.sin(-midAngle * RADIAN);
-    const lineStartX = cx + lineStartRadius * cos;
-    const lineStartY = cy + lineStartRadius * sin;
-    const lineBendX = cx + lineBendRadius * cos;
-    const lineBendY = cy + lineBendRadius * sin;
-    const isRightSide = cos >= 0;
-    const labelX = cx + labelRadius * cos;
-    const labelY = cy + labelRadius * sin;
-    const dx = isRightSide ? 3 : -3;
-    const textAnchor = isRightSide ? 'start' : 'end';
-
-    return (
-      <g>
-        <polyline
-          points={`${lineStartX},${lineStartY} ${lineBendX},${lineBendY} ${labelX},${labelY}`}
-          fill="none"
-          stroke="#94a3b8"
-          strokeWidth={1}
-        />
-        <text x={labelX} y={labelY} dx={dx} fill="#334155" textAnchor={textAnchor} fontSize={10} fontWeight={700}>
-          {name}
-        </text>
-        <text x={labelX} y={labelY} dx={dx} dy={12} fill="#334155" textAnchor={textAnchor} fontSize={10} fontWeight={700}>
-          {formatPercent(burnRate)}
-        </text>
-      </g>
-    );
-  };
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="charts-overview-container">
       {/* Chart 1: 조직별 사용 비중 (원그래프 & 금액/비율 분리 표기) */}
@@ -223,21 +184,19 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           </span>
         </div>
 
-        <div className="h-72 relative flex items-center justify-center">
+        <div className="h-60 relative flex items-center justify-center">
           {orgPieData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <RePieChart margin={{ top: 32, right: 52, bottom: 32, left: 52 }}>
+              <RePieChart>
                 <Pie
                   data={orgPieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={42}
-                  outerRadius={62}
+                  innerRadius={55}
+                  outerRadius={85}
                   paddingAngle={3}
                   dataKey="value"
                   cursor="pointer"
-                  label={renderOrgBurnRateLabel}
-                  labelLine={false}
                 >
                   {orgPieData.map(entry => (
                     <Cell
