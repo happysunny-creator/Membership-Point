@@ -275,7 +275,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               <span className="text-xs font-semibold text-slate-500">명</span>
             </div>
             <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-              10,000P 이상
+              배정 회원
             </span>
           </div>
         </div>
