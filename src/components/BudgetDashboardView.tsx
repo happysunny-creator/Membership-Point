@@ -49,16 +49,56 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   onOpenAddTransactionForCustomer,
   onOpenAdjustBudgetForCustomer,
 }) => {
-  // 실적관리(상세)에서 업로드/등록된 실적 중 가장 최근 사용일시 — 이 화면이 어느 시점까지의
-  // 실적을 반영하는지 우측 상단에 안내하기 위한 기준일
-  const latestUsageDate = useMemo(() => {
-    let latest: string | null = null;
+  // 실적 기준일 선택 — 'latest'는 현재(최신) 누적 실적을 그대로 보여주고, 특정 날짜를
+  // 고르면 그 날짜까지 발생한 거래만 반영해 배정 예산·사용 실적·잔여·사용률을 재계산한다.
+  const [asOfDate, setAsOfDate] = useState<string>('latest');
+
+  // 선택 가능한 기준일 목록: 실제 사용(SPEND) 실적이 발생한 날짜만 최신순으로 제공
+  const availableAsOfDates = useMemo(() => {
+    const dates = new Set<string>();
     transactions.forEach(t => {
-      if (t.type !== 'SPEND') return;
-      if (!latest || t.timestamp > latest) latest = t.timestamp;
+      if (t.type === 'SPEND') dates.add(t.timestamp.slice(0, 10));
     });
-    return latest ? latest.slice(0, 10) : null;
+    return Array.from(dates).sort((a, b) => b.localeCompare(a));
   }, [transactions]);
+
+  // 선택한 기준일까지의 거래만 반영한 회원별 배정 예산·사용 실적·잔여 포인트.
+  // 배정 예산은 "현재 배정액 - 기준일 이후에 발생한 배정" 방식으로 계산해, 기준일 이전에
+  // 배정 거래 기록이 없는 회원도 자연스럽게 현재 배정액을 그대로 유지하도록 한다.
+  const effectiveCustomers = useMemo(() => {
+    if (asOfDate === 'latest') return customers;
+
+    const futureAllocationMap: Record<string, number> = {};
+    const usedAsOfMap: Record<string, number> = {};
+
+    transactions.forEach(t => {
+      if (t.status !== 'COMPLETED') return;
+      const tDate = t.timestamp.slice(0, 10);
+      const isAfterCutoff = tDate > asOfDate;
+
+      if (t.type === 'BUDGET_ALLOCATION') {
+        if (isAfterCutoff) {
+          futureAllocationMap[t.customerId] = (futureAllocationMap[t.customerId] || 0) + t.amount;
+        }
+        return;
+      }
+      if (isAfterCutoff) return;
+
+      if (t.type === 'SPEND') {
+        usedAsOfMap[t.customerId] = (usedAsOfMap[t.customerId] || 0) + t.amount;
+      } else if (t.type === 'RECHARGE' || t.type === 'REFUND') {
+        usedAsOfMap[t.customerId] = Math.max((usedAsOfMap[t.customerId] || 0) - t.amount, 0);
+      }
+    });
+
+    return customers.map(c => {
+      const totalBudget = Math.max(c.totalBudget - (futureAllocationMap[c.id] || 0), 0);
+      const usedPoints = usedAsOfMap[c.id] || 0;
+      const remainingPoints = Math.max(totalBudget - usedPoints, 0);
+      return { ...c, totalBudget, usedPoints, remainingPoints };
+    });
+  }, [customers, transactions, asOfDate]);
+
   // View Switcher: 'organization' (조직별 현황) | 'customer' (회원별 현황)
   const [viewMode, setViewMode] = useState<'organization' | 'customer'>('organization');
 
@@ -139,7 +179,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
       }
     > = {};
 
-    customers.forEach(c => {
+    effectiveCustomers.forEach(c => {
       const orgName = c.company.trim() || '미지정 조직';
       if (!map[orgName]) {
         map[orgName] = {
@@ -184,7 +224,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     // Custom organization display priority (set in 설정 > 운영 정책) takes precedence;
     // orgs not included in it fall back to the metric-based sort above.
     return sortByOrgPriority(list, settings?.orgPriorityOrder, fallbackSort);
-  }, [customers, sortBy, sortOrder, settings]);
+  }, [effectiveCustomers, sortBy, sortOrder, settings]);
 
   // Unique Organization names for filter dropdown
   const uniqueOrgNames = useMemo<string[]>(() => {
@@ -197,6 +237,16 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     if (selectedOrgFilter === 'all') return null;
     return orgGroups.find(og => og.company === selectedOrgFilter) || null;
   }, [orgGroups, selectedOrgFilter]);
+
+  // 전체 조직 통합 지표 — 기준일 재계산과 항상 일치하도록 summary prop 대신
+  // effectiveCustomers에서 직접 합산한다 (기준일이 'latest'일 때는 summary와 동일한 값)
+  const overallMetrics = useMemo(() => {
+    const totalBudget = effectiveCustomers.reduce((acc, c) => acc + c.totalBudget, 0);
+    const totalUsed = effectiveCustomers.reduce((acc, c) => acc + c.usedPoints, 0);
+    const totalRemaining = effectiveCustomers.reduce((acc, c) => acc + c.remainingPoints, 0);
+    const burnRate = totalBudget > 0 ? (totalUsed / totalBudget) * 100 : 0;
+    return { totalBudget, totalUsed, totalRemaining, burnRate, customerCount: effectiveCustomers.length };
+  }, [effectiveCustomers]);
 
   // Selected Target Summary Metrics (Overall or specific Org)
   const activeMetrics = useMemo(() => {
@@ -217,21 +267,21 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     return {
       title: '전체 조직 통합',
       isSpecificOrg: false,
-      totalBudget: summary.totalBudget,
-      totalUsed: summary.totalUsed,
-      totalRemaining: summary.totalRemaining,
-      burnRate: summary.overallBurnRate,
-      customerCount: summary.totalCustomers,
+      totalBudget: overallMetrics.totalBudget,
+      totalUsed: overallMetrics.totalUsed,
+      totalRemaining: overallMetrics.totalRemaining,
+      burnRate: overallMetrics.burnRate,
+      customerCount: overallMetrics.customerCount,
       orgCount: orgGroups.length,
       departments: [],
       managers: [],
     };
-  }, [selectedOrgData, summary, orgGroups]);
+  }, [selectedOrgData, overallMetrics, orgGroups]);
 
 
   // Filtered & Sorted Customer List for Customer View
   const filteredCustomers = useMemo(() => {
-    const filtered = customers
+    const filtered = effectiveCustomers
       .filter(c => {
         // Search Filter
         if (searchTerm.trim()) {
@@ -294,7 +344,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
       }
       return sortOrder === 'desc' ? b.totalBudget - a.totalBudget : a.totalBudget - b.totalBudget;
     });
-  }, [customers, searchTerm, selectedOrgFilter, selectedDeptFilter, statusFilter, sortBy, sortOrder, settings]);
+  }, [effectiveCustomers, searchTerm, selectedOrgFilter, selectedDeptFilter, statusFilter, sortBy, sortOrder, settings]);
 
   // Filtered Organization List for Organization View
   const displayOrgGroups = useMemo(() => {
@@ -360,13 +410,14 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   };
 
   const isAnyFilterActive =
-    selectedOrgFilter !== 'all' || selectedDeptFilter !== 'all' || statusFilter !== 'all' || searchTerm !== '';
+    selectedOrgFilter !== 'all' || selectedDeptFilter !== 'all' || statusFilter !== 'all' || searchTerm !== '' || asOfDate !== 'latest';
 
   const handleResetFilters = () => {
     setSelectedOrgFilter('all');
     setSelectedDeptFilter('all');
     setStatusFilter('all');
     setSearchTerm('');
+    setAsOfDate('latest');
   };
 
   return (
@@ -495,7 +546,34 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* 5. Reset Button */}
+            {/* 5. 실적 기준일 선택 — 특정 날짜를 고르면 그날까지의 거래만 반영해 재계산 */}
+            <div className="relative min-w-[170px] flex-1 sm:flex-none">
+              <div className="text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-400" />
+                <span>실적 기준일</span>
+              </div>
+              <div className="relative">
+                <select
+                  value={asOfDate}
+                  onChange={e => setAsOfDate(e.target.value)}
+                  className={`w-full h-9 appearance-none pl-3 pr-8 border rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    asOfDate !== 'latest'
+                      ? 'bg-blue-50 border-blue-300 text-blue-900 ring-2 ring-blue-500/10'
+                      : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 text-slate-800'
+                  }`}
+                >
+                  <option value="latest">전체 실적 (최신 기준)</option>
+                  {availableAsOfDates.map(d => (
+                    <option key={d} value={d}>
+                      {d} 기준
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* 6. Reset Button */}
             {isAnyFilterActive && (
               <div className="flex flex-col justify-end">
                 <div className="text-[11px] text-transparent mb-1 select-none">초기화</div>
@@ -510,16 +588,6 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             )}
           </div>
-
-          {/* Right: 실적 기준일 — 실적관리(상세)에 등록된 실적 중 가장 최근 사용일시 */}
-          {latestUsageDate && (
-            <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>
-                실적 기준일 <span className="font-extrabold text-slate-900">{latestUsageDate}</span>
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
