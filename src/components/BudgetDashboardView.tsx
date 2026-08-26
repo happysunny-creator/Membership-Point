@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Customer, BudgetSummary, SystemSettings } from '../types';
+import { Customer, Transaction, BudgetSummary, SystemSettings } from '../types';
 import {
   Layers,
   Network,
@@ -18,6 +18,7 @@ import {
   TrendingUp,
   User,
   X,
+  Calendar,
 } from 'lucide-react';
 import {
   formatPoints,
@@ -31,6 +32,7 @@ import { separateNameAndPosition } from '../utils/nameParser';
 
 interface BudgetDashboardViewProps {
   customers: Customer[];
+  transactions: Transaction[];
   summary: BudgetSummary;
   settings?: SystemSettings;
   onSelectCustomer: (customer: Customer) => void;
@@ -40,12 +42,23 @@ interface BudgetDashboardViewProps {
 
 export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   customers,
+  transactions,
   summary,
   settings,
   onSelectCustomer,
   onOpenAddTransactionForCustomer,
   onOpenAdjustBudgetForCustomer,
 }) => {
+  // 실적관리(상세)에서 업로드/등록된 실적 중 가장 최근 사용일시 — 이 화면이 어느 시점까지의
+  // 실적을 반영하는지 우측 상단에 안내하기 위한 기준일
+  const latestUsageDate = useMemo(() => {
+    let latest: string | null = null;
+    transactions.forEach(t => {
+      if (t.type !== 'SPEND') return;
+      if (!latest || t.timestamp > latest) latest = t.timestamp;
+    });
+    return latest ? latest.slice(0, 10) : null;
+  }, [transactions]);
   // View Switcher: 'organization' (조직별 현황) | 'customer' (회원별 현황)
   const [viewMode, setViewMode] = useState<'organization' | 'customer'>('organization');
 
@@ -497,6 +510,16 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             )}
           </div>
+
+          {/* Right: 실적 기준일 — 실적관리(상세)에 등록된 실적 중 가장 최근 사용일시 */}
+          {latestUsageDate && (
+            <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span>
+                실적 기준일 <span className="font-extrabold text-slate-900">{latestUsageDate}</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
