@@ -165,6 +165,28 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
   const latestData = monthlyTrendData[monthlyTrendData.length - 1];
 
+  // 조직별 사용 비중 도넛 위에 조각별 사용률(burnRate)을 직접 표기하는 커스텀 라벨
+  const RADIAN = Math.PI / 180;
+  const renderOrgBurnRateLabel = (props: any) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, burnRate } = props;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#ffffff"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={10}
+        fontWeight={800}
+      >
+        {formatPercent(burnRate)}
+      </text>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="charts-overview-container">
       {/* Chart 1: 조직별 사용 비중 (원그래프 & 금액/비율 분리 표기) */}
@@ -197,6 +219,8 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                   paddingAngle={3}
                   dataKey="value"
                   cursor="pointer"
+                  label={renderOrgBurnRateLabel}
+                  labelLine={false}
                 >
                   {orgPieData.map(entry => (
                     <Cell
