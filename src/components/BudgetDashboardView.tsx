@@ -25,6 +25,7 @@ import {
   calculateBurnRate,
   getBurnRateColorClass,
   sortByOrgPriority,
+  comparePositionRank,
 } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
 
@@ -56,7 +57,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   const [expandedOrgs, setExpandedOrgs] = useState<Record<string, boolean>>({});
 
   // Sort State
-  const [sortBy, setSortBy] = useState<'budget' | 'used' | 'remaining' | 'burnRate' | 'name'>('budget');
+  const [sortBy, setSortBy] = useState<'budget' | 'used' | 'remaining' | 'burnRate' | 'name' | 'position' | 'department'>('department');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Classify a burn rate into its 4-stage bucket, using the same thresholds everywhere
@@ -217,7 +218,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
 
   // Filtered & Sorted Customer List for Customer View
   const filteredCustomers = useMemo(() => {
-    return customers
+    const filtered = customers
       .filter(c => {
         // Search Filter
         if (searchTerm.trim()) {
@@ -247,17 +248,39 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
         }
 
         return true;
-      })
-      .sort((a, b) => {
-        const rateA = calculateBurnRate(a.usedPoints, a.totalBudget);
-        const rateB = calculateBurnRate(b.usedPoints, b.totalBudget);
-
-        if (sortBy === 'used') return sortOrder === 'desc' ? b.usedPoints - a.usedPoints : a.usedPoints - b.usedPoints;
-        if (sortBy === 'remaining') return sortOrder === 'desc' ? b.remainingPoints - a.remainingPoints : a.remainingPoints - b.remainingPoints;
-        if (sortBy === 'burnRate') return sortOrder === 'desc' ? rateB - rateA : rateA - rateB;
-        if (sortBy === 'name') return sortOrder === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
-        return sortOrder === 'desc' ? b.totalBudget - a.totalBudget : a.totalBudget - b.totalBudget;
       });
+
+    // 조직 표시 우선순위(관리자 모드 > 조직 목록 관리에서 지정) 기준 순위표 — "소속 부서"
+    // 헤더를 클릭했을 때 이 순서로, 등록되지 않은 조직은 뒤로 정렬한다.
+    const orgRank = new Map<string, number>((settings?.orgPriorityOrder ?? []).map((name, idx) => [name, idx]));
+    const compareOrgRank = (a: Customer, b: Customer) => {
+      const rankA = orgRank.has(a.company) ? orgRank.get(a.company)! : Number.MAX_SAFE_INTEGER;
+      const rankB = orgRank.has(b.company) ? orgRank.get(b.company)! : Number.MAX_SAFE_INTEGER;
+      return rankA - rankB;
+    };
+
+    return [...filtered].sort((a, b) => {
+      const rateA = calculateBurnRate(a.usedPoints, a.totalBudget);
+      const rateB = calculateBurnRate(b.usedPoints, b.totalBudget);
+
+      if (sortBy === 'used') return sortOrder === 'desc' ? b.usedPoints - a.usedPoints : a.usedPoints - b.usedPoints;
+      if (sortBy === 'remaining') return sortOrder === 'desc' ? b.remainingPoints - a.remainingPoints : a.remainingPoints - b.remainingPoints;
+      if (sortBy === 'burnRate') return sortOrder === 'desc' ? rateB - rateA : rateA - rateB;
+      if (sortBy === 'name') return sortOrder === 'desc' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
+      if (sortBy === 'position') {
+        // 'desc' is the default first click for every column here, so it maps to the
+        // "most senior first" (사장 → 담당) natural reading of the rank list.
+        const rankDiff = comparePositionRank(a.position, b.position);
+        return sortOrder === 'desc' ? rankDiff : -rankDiff;
+      }
+      if (sortBy === 'department') {
+        // Same convention: 'desc' shows organizations in their configured priority
+        // order (1번 조직부터), 'asc' reverses it.
+        const orgDiff = compareOrgRank(a, b);
+        return sortOrder === 'desc' ? orgDiff : -orgDiff;
+      }
+      return sortOrder === 'desc' ? b.totalBudget - a.totalBudget : a.totalBudget - b.totalBudget;
+    });
   }, [customers, searchTerm, selectedOrgFilter, selectedDeptFilter, statusFilter, sortBy, sortOrder, settings]);
 
   // Filtered Organization List for Organization View
@@ -314,7 +337,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
     return targetOrg ? targetOrg.departmentList.sort() : [];
   }, [customers, selectedOrgFilter, orgGroups]);
 
-  const handleSort = (field: 'budget' | 'used' | 'remaining' | 'burnRate' | 'name') => {
+  const handleSort = (field: 'budget' | 'used' | 'remaining' | 'burnRate' | 'name' | 'position' | 'department') => {
     if (sortBy === field) {
       setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'));
     } else {
@@ -949,10 +972,14 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               <thead>
                 <tr className="bg-slate-100/80 text-slate-700 border-b border-slate-200 font-bold select-none">
                   <th className="py-3 px-4 sm:px-6 text-left">
-                    <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleSort('department')}
+                      className="flex items-center gap-1.5 hover:text-slate-900 transition-colors cursor-pointer"
+                    >
                       <Network className="w-3 h-3 text-cyan-600" />
                       <span>소속 부서</span>
-                    </div>
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    </button>
                   </th>
                   <th className="py-3 px-3 text-left">
                     <button
@@ -963,7 +990,15 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                       <ArrowUpDown className="w-3 h-3 text-slate-400" />
                     </button>
                   </th>
-                  <th className="py-3 px-3 text-left">직위</th>
+                  <th className="py-3 px-3 text-left">
+                    <button
+                      onClick={() => handleSort('position')}
+                      className="flex items-center gap-1.5 hover:text-slate-900 transition-colors cursor-pointer"
+                    >
+                      <span>직위</span>
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    </button>
+                  </th>
                   <th className="py-3 px-3 text-right">
                     <button
                       onClick={() => handleSort('budget')}

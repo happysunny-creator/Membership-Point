@@ -267,6 +267,24 @@ export function sortByOrgPriority<T extends { company: string }>(
   });
 }
 
+/**
+ * Corporate title seniority order (높은 직위부터), used to sort 직위 columns by
+ * hierarchy rather than alphabetically. Titles not in this list rank after all
+ * known ones and fall back to Korean locale string order among themselves.
+ */
+const POSITION_PRIORITY = ['사장', '부사장', '전무', '상무', '담당'];
+
+export function comparePositionRank(a: string | undefined, b: string | undefined): number {
+  const posA = (a || '').trim();
+  const posB = (b || '').trim();
+  const rankA = POSITION_PRIORITY.indexOf(posA);
+  const rankB = POSITION_PRIORITY.indexOf(posB);
+  const safeRankA = rankA === -1 ? Number.MAX_SAFE_INTEGER : rankA;
+  const safeRankB = rankB === -1 ? Number.MAX_SAFE_INTEGER : rankB;
+  if (safeRankA !== safeRankB) return safeRankA - safeRankB;
+  return posA.localeCompare(posB);
+}
+
 export function calculateBurnRate(used: number, budget: number): number {
   if (budget <= 0) return 0;
   const rate = (used / budget) * 100;
