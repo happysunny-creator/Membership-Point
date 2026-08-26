@@ -63,11 +63,14 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   }, [transactions]);
 
   // 선택한 기준일까지의 거래만 반영한 회원별 배정 예산·사용 실적·잔여 포인트.
-  // 배정 예산은 "현재 배정액 - 기준일 이후에 발생한 배정" 방식으로 계산해, 기준일 이전에
-  // 배정 거래 기록이 없는 회원도 자연스럽게 현재 배정액을 그대로 유지하도록 한다.
+  // 사용 실적은 기준일이 속한 해의 1월 1일부터 기준일까지 누적한 값이다 (월별 포인트
+  // 소진 추이 차트와 동일한 "연초부터 누적" 방식). 배정 예산은 "현재 배정액 - 기준일
+  // 이후에 발생한 배정" 방식으로 계산해, 기준일 이전에 배정 거래 기록이 없는 회원도
+  // 자연스럽게 현재 배정액을 그대로 유지하도록 한다.
   const effectiveCustomers = useMemo(() => {
     if (asOfDate === 'latest') return customers;
 
+    const yearStart = `${asOfDate.slice(0, 4)}-01-01`;
     const futureAllocationMap: Record<string, number> = {};
     const usedAsOfMap: Record<string, number> = {};
 
@@ -82,7 +85,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
         }
         return;
       }
-      if (isAfterCutoff) return;
+      if (isAfterCutoff || tDate < yearStart) return;
 
       if (t.type === 'SPEND') {
         usedAsOfMap[t.customerId] = (usedAsOfMap[t.customerId] || 0) + t.amount;
