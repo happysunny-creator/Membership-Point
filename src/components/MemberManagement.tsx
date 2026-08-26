@@ -178,7 +178,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              회원 등록 및 포인트 배정을 종합 관리 합니다.
+              회원 등록 및 포인트 배정을 종합 관리하고, 조직별 회원 상세 목록을 확인할 수 있습니다.
             </p>
           </div>
         </div>
