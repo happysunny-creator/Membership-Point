@@ -91,6 +91,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // 담당자별 실적 안내 이메일 초안 작성용 요약 (보고서 관리 탭)
   const managerSummaries = useMemo(() => buildManagerSummaries(customers), [customers]);
+  const mailableManagerSummaries = useMemo(
+    () => managerSummaries.filter(s => s.managerEmail),
+    [managerSummaries]
+  );
+
+  // 이메일이 등록된 모든 담당자에게 실적 안내 초안을 한 번에 연다 (실제 발송은 각 메일
+  // 클라이언트 창에서 사용자가 직접 눌러야 함). 같은 클릭(사용자 제스처) 안에서 동기적으로
+  // 여러 mailto 링크를 열어야 팝업 차단을 피할 수 있어 링크 클릭을 직접 시뮬레이션한다.
+  const handleBulkManagerMailto = () => {
+    mailableManagerSummaries.forEach(summary => {
+      const link = document.createElement('a');
+      link.href = buildManagerMailtoLink(summary);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  };
 
   // Organization display priority order (조직 표시 우선순위)
   const uniqueCompanies = useMemo(() => {
@@ -1138,14 +1155,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </p>
 
           <div className="pt-5 border-t border-slate-100 space-y-3">
-            <div className="flex items-center space-x-2.5">
-              <Mail className="w-4 h-4 text-indigo-600" />
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">담당자별 실적 안내</h4>
-                <p className="text-[11px] text-slate-500">
-                  담당자별로 담당 회원의 포인트 사용 실적을 정리한 이메일 초안을 작성합니다. 초안만 열리며, 발송은 직접 눌러야 합니다.
-                </p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5">
+                <Mail className="w-4 h-4 text-indigo-600" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900">담당자별 실적 안내</h4>
+                  <p className="text-[11px] text-slate-500">
+                    담당자별로 담당 회원의 포인트 사용 실적을 정리한 이메일 초안을 작성합니다. 초안만 열리며, 발송은 직접 눌러야 합니다.
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={handleBulkManagerMailto}
+                disabled={mailableManagerSummaries.length === 0}
+                title={
+                  mailableManagerSummaries.length === 0
+                    ? '이메일이 등록된 담당자가 없습니다.'
+                    : `이메일이 등록된 담당자 ${mailableManagerSummaries.length}명에게 초안을 엽니다.`
+                }
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>담당자에게 일괄 발송 하기</span>
+              </button>
             </div>
 
             <div className="border border-slate-200 rounded-xl overflow-hidden">
