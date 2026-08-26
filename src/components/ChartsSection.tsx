@@ -165,25 +165,61 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
   const latestData = monthlyTrendData[monthlyTrendData.length - 1];
 
-  // 조직별 사용 비중 도넛 위에 조각별 사용률(burnRate)을 직접 표기하는 커스텀 라벨
+  // 조직별 사용 비중 도넛 위에 조각별 사용률(burnRate)을 표기하고, 도표 바깥쪽 둘레에는
+  // 조직명을 안내선과 함께 짙은 회색으로 표기하는 커스텀 라벨
   const RADIAN = Math.PI / 180;
   const renderOrgBurnRateLabel = (props: any) => {
-    const { cx, cy, midAngle, innerRadius, outerRadius, burnRate } = props;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const { cx, cy, midAngle, innerRadius, outerRadius, name, burnRate } = props;
+    const rateRadius = innerRadius + (outerRadius - innerRadius) * 0.6;
+    const rx = cx + rateRadius * Math.cos(-midAngle * RADIAN);
+    const ry = cy + rateRadius * Math.sin(-midAngle * RADIAN);
+
+    // Outer name label with a short leader line, anchored left/right depending on side
+    const lineStartRadius = outerRadius + 4;
+    const lineBendRadius = outerRadius + 14;
+    const labelRadius = outerRadius + 17;
+    const cos = Math.cos(-midAngle * RADIAN);
+    const sin = Math.sin(-midAngle * RADIAN);
+    const lineStartX = cx + lineStartRadius * cos;
+    const lineStartY = cy + lineStartRadius * sin;
+    const lineBendX = cx + lineBendRadius * cos;
+    const lineBendY = cy + lineBendRadius * sin;
+    const isRightSide = cos >= 0;
+    const labelX = cx + labelRadius * cos;
+    const labelY = cy + labelRadius * sin;
+
     return (
-      <text
-        x={x}
-        y={y}
-        fill="#ffffff"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={10}
-        fontWeight={800}
-      >
-        {formatPercent(burnRate)}
-      </text>
+      <g>
+        <text
+          x={rx}
+          y={ry}
+          fill="#ffffff"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={10}
+          fontWeight={800}
+        >
+          {formatPercent(burnRate)}
+        </text>
+        <polyline
+          points={`${lineStartX},${lineStartY} ${lineBendX},${lineBendY} ${labelX},${labelY}`}
+          fill="none"
+          stroke="#94a3b8"
+          strokeWidth={1}
+        />
+        <text
+          x={labelX}
+          y={labelY}
+          dx={isRightSide ? 3 : -3}
+          fill="#334155"
+          textAnchor={isRightSide ? 'start' : 'end'}
+          dominantBaseline="central"
+          fontSize={10}
+          fontWeight={700}
+        >
+          {name}
+        </text>
+      </g>
     );
   };
 
@@ -206,16 +242,16 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           </span>
         </div>
 
-        <div className="h-60 relative flex items-center justify-center">
+        <div className="h-64 relative flex items-center justify-center">
           {orgPieData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <RePieChart>
+              <RePieChart margin={{ top: 24, right: 48, bottom: 24, left: 48 }}>
                 <Pie
                   data={orgPieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={85}
+                  innerRadius={45}
+                  outerRadius={68}
                   paddingAngle={3}
                   dataKey="value"
                   cursor="pointer"
