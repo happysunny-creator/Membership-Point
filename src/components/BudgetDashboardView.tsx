@@ -526,32 +526,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* 4. Search Input (성함 검색) */}
-            <div className="relative min-w-[180px] flex-1 sm:flex-none">
-              <div className="text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-                <Search className="w-3 h-3 text-slate-400" />
-                <span>성함 검색</span>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="회원 성함 검색..."
-                  className="w-full h-9 pl-3 pr-7 text-xs bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors text-slate-800 font-medium"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer text-xs"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 5. 실적 기준일 선택 — 특정 날짜를 고르면 그날까지의 거래만 반영해 재계산 */}
+            {/* 4. 실적 기준일 선택 — 특정 날짜를 고르면 그날까지의 거래만 반영해 재계산 */}
             <div className="relative min-w-[170px] flex-1 sm:flex-none">
               <div className="text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-slate-400" />
