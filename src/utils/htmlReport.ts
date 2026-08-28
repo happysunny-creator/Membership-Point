@@ -129,16 +129,6 @@ export function generateStatusReportHtml({
     font-weight: 400;
     color: #64748b;
   }
-  .badge {
-    font-size: 12px;
-    font-weight: 700;
-    color: #4338ca;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    padding: 4px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
