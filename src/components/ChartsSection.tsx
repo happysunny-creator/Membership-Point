@@ -15,7 +15,8 @@ import {
 import { Customer, Transaction, SystemSettings } from '../types';
 import { formatNumber, formatPoints, formatPercent, calculateBurnRate } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
-import { Layers, Gauge, TrendingUp, X, Users } from 'lucide-react';
+import { downloadMemberUsageReportPdf } from '../utils/htmlReport';
+import { Layers, Gauge, TrendingUp, X, Users, BellRing } from 'lucide-react';
 
 interface ChartsSectionProps {
   customers: Customer[];
@@ -34,6 +35,14 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   const [expandedPanel, setExpandedPanel] = useState<'org' | 'stage' | null>(null);
   const toggleOrgPanel = () => setExpandedPanel(prev => (prev === 'org' ? null : 'org'));
   const toggleStagePanel = () => setExpandedPanel(prev => (prev === 'stage' ? null : 'stage'));
+
+  // "사용 실적 알림" 버튼 — 회원 1인용 실적 안내 PDF(배정/실적/잔액/사용률 +
+  // 지금까지 사용한 포인트 승인 내역)를 대화상자 없이 바로 저장한다.
+  const handleSendUsageAlert = (customer: Customer) => {
+    downloadMemberUsageReportPdf({ customer, transactions }).catch(() => {
+      window.alert('실적 알림 PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    });
+  };
   // 1. Prepare Organization (조직별) Spending & Ratio Pie Chart Data
   const { orgPieData, totalOrgSpent, uniqueOrgCount } = useMemo(() => {
     const orgMap: Record<string, { used: number; count: number; budget: number }> = {};
@@ -561,12 +570,13 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
               라인이 어긋난다). */}
           <table className="w-full text-left text-xs" style={{ tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '14%' }} />
               <col style={{ width: '18%' }} />
-              <col style={{ width: '18%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '12%' }} />
               <col style={{ width: '16%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '14%' }} />
             </colgroup>
             <thead>
               <tr className="text-slate-500 border-b border-slate-200">
@@ -576,6 +586,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                 <th className="py-2 px-3 font-semibold text-right">배정 예산</th>
                 <th className="py-2 px-3 font-semibold text-right">사용 실적</th>
                 <th className="py-2 px-3 font-semibold text-right">사용률</th>
+                <th className="py-2 px-3 font-semibold text-center">알림</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -587,7 +598,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                 const rows = [
                   <tr key={`${stageId}-header`}>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="py-1.5 px-3 text-[11px] font-extrabold"
                       style={{ color: stage.color, backgroundColor: `${stage.color}14` }}
                     >
@@ -602,7 +613,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                 if (sortedMembers.length === 0) {
                   rows.push(
                     <tr key={`${stageId}-empty`}>
-                      <td colSpan={6} className="py-2 px-3 text-slate-300">
+                      <td colSpan={7} className="py-2 px-3 text-slate-300">
                         해당 단계에 속한 회원이 없습니다.
                       </td>
                     </tr>
@@ -620,6 +631,16 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                         <td className="py-2 px-3 text-right font-semibold text-blue-700">{formatPoints(m.usedPoints)}</td>
                         <td className="py-2 px-3 text-right font-extrabold" style={{ color: stage.color }}>
                           {formatPercent(rate)}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <button
+                            onClick={() => handleSendUsageAlert(m)}
+                            title="포인트 사용 실적 안내 PDF를 저장합니다"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-800 text-white rounded-md text-[10px] font-bold transition-colors cursor-pointer"
+                          >
+                            <BellRing className="w-3 h-3" />
+                            <span>사용 실적 알림</span>
+                          </button>
                         </td>
                       </tr>
                     );
