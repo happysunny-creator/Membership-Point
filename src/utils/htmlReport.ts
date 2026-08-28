@@ -457,7 +457,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
   }
   th, td {
     padding: 8px 10px;
-    text-align: left;
+    text-align: center;
     border-bottom: 1px solid #f1f5f9;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -469,7 +469,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     font-weight: 700;
     font-size: 12px;
   }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.num, th.num { text-align: center; font-variant-numeric: tabular-nums; }
   tbody tr:hover { background: #f8fafc; }
   .footer {
     margin-top: 36px;
