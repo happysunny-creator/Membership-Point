@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   PieChart as RePieChart,
   Pie,
@@ -65,6 +65,8 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       id: `org-${idx}`,
       name: item.company,
       value: item.used,
+      budget: item.budget,
+      remaining: Math.max(item.budget - item.used, 0),
       count: item.count,
       percent: totalSpend > 0 ? (item.used / totalSpend) * 100 : 0,
       burnRate: item.budget > 0 ? (item.used / item.budget) * 100 : 0,
@@ -77,6 +79,13 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       uniqueOrgCount: sorted.length,
     };
   }, [customers]);
+
+  // 조직별 사용 비중 도넛에서 클릭으로 선택한 조직의 상세(예산/사용/잔여)를 보여주기 위한 상태
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const selectedOrg = orgPieData.find(o => o.id === selectedOrgId) || null;
+  const toggleSelectedOrg = (id: string) => {
+    setSelectedOrgId(prev => (prev === id ? null : id));
+  };
 
   // 2. Prepare Merchant (사용처별) Spending & Ratio Pie Chart Data
   const { merchantPieData, totalMerchantSpend, uniqueMerchantCount } = useMemo(() => {
@@ -202,8 +211,9 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                     <Cell
                       key={`cell-${entry.id}`}
                       fill={entry.color}
-                      stroke="#ffffff"
-                      strokeWidth={1.5}
+                      stroke={entry.id === selectedOrgId ? '#1e293b' : '#ffffff'}
+                      strokeWidth={entry.id === selectedOrgId ? 2.5 : 1.5}
+                      onClick={() => toggleSelectedOrg(entry.id)}
                     />
                   ))}
                 </Pie>
@@ -227,9 +237,31 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
             <div className="text-xs text-slate-400">데이터가 없습니다.</div>
           )}
 
-          <div className="absolute flex flex-col items-center pointer-events-none">
-            <span className="text-[11px] text-slate-400 font-medium">총 소진액</span>
-            <span className="text-xs font-extrabold text-slate-800">{formatNumber(totalOrgSpent)}</span>
+          {/* 도넛 중앙 표시 — 평소엔 총 소진액, 조각/범례를 클릭해 조직을 선택하면 그
+              조직의 예산·사용금액(사용률)·잔여금액으로 바뀐다. absolute 배치라 카드
+              전체 높이에는 영향을 주지 않아 옆 차트와의 정렬이 흐트러지지 않는다. */}
+          <div className="absolute flex flex-col items-center pointer-events-none px-2 text-center max-w-[92px]">
+            {selectedOrg ? (
+              <>
+                <span className="text-[10px] font-extrabold text-slate-900 truncate max-w-full" title={selectedOrg.name}>
+                  {selectedOrg.name}
+                </span>
+                <span className="text-[9px] text-slate-400 leading-tight mt-0.5">
+                  예산 {formatPoints(selectedOrg.budget)}
+                </span>
+                <span className="text-[9px] font-bold text-blue-600 leading-tight">
+                  사용 {formatPoints(selectedOrg.value)} ({formatPercent(selectedOrg.burnRate)})
+                </span>
+                <span className="text-[9px] text-emerald-600 leading-tight">
+                  잔여 {formatPoints(selectedOrg.remaining)}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] text-slate-400 font-medium">총 소진액</span>
+                <span className="text-xs font-extrabold text-slate-800">{formatNumber(totalOrgSpent)}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -238,7 +270,10 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {orgPieData.map(item => (
             <div
               key={item.id}
-              className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors"
+              onClick={() => toggleSelectedOrg(item.id)}
+              className={`flex items-center justify-between px-2 py-1 rounded cursor-pointer transition-colors ${
+                item.id === selectedOrgId ? 'bg-slate-100' : 'hover:bg-slate-50'
+              } text-slate-700`}
             >
               <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
