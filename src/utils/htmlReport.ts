@@ -392,6 +392,12 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     font-weight: 400;
     color: #64748b;
   }
+  .header p.greeting {
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    margin: 4px 0 6px;
+  }
   .badge {
     font-size: 12px;
     font-weight: 700;
@@ -487,6 +493,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     <div class="header">
       <div>
         <h1>${escapeHtml(reportTitle)}</h1>
+        <p class="greeting">남산 리더십센터 / 스마일즈 멤버십 포인트 사용 현황을 안내드립니다.</p>
         <p>기준일: ${escapeHtml(todayStr)} · 보고서 생성일시: ${escapeHtml(generatedAt)}</p>
       </div>
     </div>
