@@ -22,18 +22,22 @@ interface ChartsSectionProps {
   customers: Customer[];
   transactions: Transaction[];
   settings?: SystemSettings;
+  // 조직별 사용 비중 카드(제목/조각/범례)를 클릭했을 때 호출 — 이 컴포넌트 안에 별도
+  // 패널을 만드는 대신, 상위(App)에서 이미 있는 "조직별 포인트 사용 실적 및 지출 분석"
+  // (CategoryAnalyticsView) 섹션으로 스크롤 이동시키는 데 사용한다.
+  onSelectOrg?: () => void;
 }
 
 export const ChartsSection: React.FC<ChartsSectionProps> = ({
   customers,
   transactions,
   settings,
+  onSelectOrg,
 }) => {
-  // 차트 카드(조직별 사용 비중 / 사용률 단계별 인원 현황)를 클릭하면 3개 차트 그리드
-  // 바로 아래에 해당 상세 패널이 인라인으로 펼쳐진다 (그리드 카드 자체의 높이에는
-  // 영향을 주지 않도록 그리드 바깥에 렌더링).
-  const [expandedPanel, setExpandedPanel] = useState<'org' | 'stage' | null>(null);
-  const toggleOrgPanel = () => setExpandedPanel(prev => (prev === 'org' ? null : 'org'));
+  // 사용률 단계별 인원 현황 카드를 클릭하면 3개 차트 그리드 바로 아래에 단계별 회원
+  // 리스트 패널이 인라인으로 펼쳐진다 (그리드 카드 자체의 높이에는 영향을 주지 않도록
+  // 그리드 바깥에 렌더링).
+  const [expandedPanel, setExpandedPanel] = useState<'stage' | null>(null);
   const toggleStagePanel = () => setExpandedPanel(prev => (prev === 'stage' ? null : 'stage'));
 
   // "사용 실적 알림" 버튼 — 회원 1인용 실적 안내 PDF(배정/실적/잔액/사용률 +
@@ -205,16 +209,12 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       {/* Chart 1: 조직별 사용 비중 (원그래프 & 금액/비율 분리 표기) */}
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
         <div
-          onClick={toggleOrgPanel}
+          onClick={onSelectOrg}
           className="flex items-center justify-between mb-2 cursor-pointer select-none"
-          title="클릭하면 아래에 조직별 상세 분석이 펼쳐집니다"
+          title="클릭하면 조직별 포인트 사용 실적 및 지출 분석으로 이동합니다"
         >
           <div className="flex items-center space-x-2">
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                expandedPanel === 'org' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
-              }`}
-            >
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600">
               <Layers className="w-4 h-4" />
             </div>
             <div>
@@ -247,7 +247,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                       fill={entry.color}
                       stroke="#ffffff"
                       strokeWidth={1.5}
-                      onClick={toggleOrgPanel}
+                      onClick={onSelectOrg}
                     />
                   ))}
                 </Pie>
@@ -292,7 +292,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {orgPieData.map(item => (
             <div
               key={item.id}
-              onClick={toggleOrgPanel}
+              onClick={onSelectOrg}
               className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
@@ -515,60 +515,6 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
         </div>
       </div>
     </div>
-
-    {/* 조직별 사용 비중 카드를 클릭하면 펼쳐지는 조직별 상세 분석 패널 (그리드 바깥, 전체 너비) */}
-    {expandedPanel === 'org' && (
-      <div className="mt-4 bg-white rounded-xl p-5 border border-slate-200 shadow-xs animate-in fade-in duration-150">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Layers className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">조직별 포인트 사용 실적 및 지출 분석</h3>
-              <p className="text-xs text-slate-500">조직별 배정 예산, 사용 실적, 잔여 포인트 및 사용률</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setExpandedPanel(null)}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {orgPieData.map(org => (
-            <div key={org.id} className="rounded-xl border border-slate-200 p-4" style={{ borderTopColor: org.color, borderTopWidth: 3 }}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: org.color }} />
-                  <span className="text-xs font-extrabold text-slate-900 truncate" title={org.name}>{org.name}</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-bold shrink-0">{org.count}명</span>
-              </div>
-              <div className="space-y-1 text-[11px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">배정 예산</span>
-                  <span className="font-bold text-slate-700">{formatPoints(org.budget)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">사용 실적</span>
-                  <span className="font-bold text-blue-700">{formatPoints(org.value)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">잔여 포인트</span>
-                  <span className="font-bold text-emerald-700">{formatPoints(org.remaining)}</span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                  <span className="text-slate-400">사용률</span>
-                  <span className="font-extrabold" style={{ color: org.color }}>{formatPercent(org.burnRate)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
 
     {/* 사용률 단계별 인원 현황 카드를 클릭하면 펼쳐지는 1~4단계 순서의 인원 리스트 패널 */}
     {expandedPanel === 'stage' && (

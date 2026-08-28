@@ -355,11 +355,17 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
 <meta charset="UTF-8" />
 <title>${escapeHtml(reportTitle)}</title>
 <style>
+  @font-face {
+    font-family: 'Pretendard Report';
+    src: url('/fonts/PretendardVariable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+  }
   * { box-sizing: border-box; font-family: inherit; }
   body {
     margin: 0;
     padding: 40px 48px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif;
+    font-family: 'Pretendard Report', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif;
     font-size: 13px;
     color: #1e293b;
     background: #f1f5f9;
@@ -585,7 +591,12 @@ export async function downloadMemberUsageReportPdf(params: MemberUsageReportPara
     const sheet = doc?.querySelector('.sheet') as HTMLElement | null;
     if (!doc || !sheet) throw new Error('보고서 내용을 찾을 수 없습니다.');
 
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // 커스텀 웹폰트(Pretendard)가 다 로드된 뒤에 캡처해야 시스템 폰트로 잘못 찍히지 않는다.
+    const iframeWindow = iframe.contentWindow as (Window & typeof globalThis) | null;
+    await Promise.all([
+      iframeWindow?.document?.fonts?.ready ?? Promise.resolve(),
+      new Promise(resolve => setTimeout(resolve, 50)),
+    ]);
     iframe.style.height = `${doc.body.scrollHeight}px`;
 
     const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff' });

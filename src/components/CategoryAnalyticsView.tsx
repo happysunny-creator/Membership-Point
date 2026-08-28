@@ -157,7 +157,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
             </div>
           </div>
           <p className="text-xs text-slate-500">
-            소속 조직(기업/법인)별 예산 배정액, 실제 누적 사용액, 인원수 및 사용률을 상세하게 분석합니다.
+            조직별 예산 배정액, 실제 누적 사용액, 인원수 및 사용률을 상세하게 분석합니다.
           </p>
         </div>
 

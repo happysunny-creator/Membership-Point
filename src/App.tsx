@@ -751,6 +751,9 @@ export default function App() {
               customers={customers}
               transactions={transactions}
               settings={settings}
+              onSelectOrg={() => {
+                document.getElementById('category-analytics-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
             />
 
             {/* Organization Analytics Grid (조직별 포인트 사용 실적) */}
