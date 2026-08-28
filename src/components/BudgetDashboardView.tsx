@@ -49,18 +49,23 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   onOpenAddTransactionForCustomer,
   onOpenAdjustBudgetForCustomer,
 }) => {
-  // 선택 가능한 기준일 목록: 실제 사용(SPEND) 실적이 발생한 날짜 + 시스템을 실행 중인
-  // 오늘 날짜(아직 실적이 없어도 항상 선택 가능하도록)를 최신순으로 제공
+  // 시스템을 실행 중인 오늘 날짜 — 기준일 목록에 항상 포함하고, 목록에서 "(현재)"로
+  // 표시하기 위해 별도로 계산해둔다.
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  // 선택 가능한 기준일 목록: 실제 사용(SPEND) 실적이 발생한 날짜 + 오늘 날짜(아직 실적이
+  // 없어도 항상 선택 가능하도록)를 최신순으로 제공
   const availableAsOfDates = useMemo(() => {
     const dates = new Set<string>();
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    dates.add(today);
+    dates.add(todayStr);
     transactions.forEach(t => {
       if (t.type === 'SPEND') dates.add(t.timestamp.slice(0, 10));
     });
     return Array.from(dates).sort((a, b) => b.localeCompare(a));
-  }, [transactions]);
+  }, [transactions, todayStr]);
 
   // 실적 기준일 선택 — 기본값은 실적이 업로드된 가장 최근 날짜(목록 맨 위). 다른 날짜를
   // 고르면 그 날짜까지 발생한 거래만 반영해 배정 예산·사용 실적·잔여·사용률을 재계산한다.
@@ -548,7 +553,7 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
                 >
                   {availableAsOfDates.map(d => (
                     <option key={d} value={d}>
-                      {d} 기준
+                      {d === todayStr ? `${d} (현재)` : `${d} 기준`}
                     </option>
                   ))}
                 </select>
