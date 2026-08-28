@@ -43,6 +43,27 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       window.alert('실적 알림 PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
     });
   };
+
+  // "사용 실적 일괄 알림" — 사용률 단계별 회원 현황에 표시된 전체 회원의 실적
+  // 안내 PDF를 순서대로 한 번에 저장한다 (동시에 여러 개를 처리하면 렌더링용
+  // iframe이 겹쳐 느려지거나 실패할 수 있어 한 명씩 순차 처리한다).
+  const [isBulkSendingAlerts, setIsBulkSendingAlerts] = useState(false);
+  const handleSendAllUsageAlerts = async (allMembers: Customer[]) => {
+    if (isBulkSendingAlerts || allMembers.length === 0) return;
+    setIsBulkSendingAlerts(true);
+    let failCount = 0;
+    for (const customer of allMembers) {
+      try {
+        await downloadMemberUsageReportPdf({ customer, transactions });
+      } catch {
+        failCount += 1;
+      }
+    }
+    setIsBulkSendingAlerts(false);
+    if (failCount > 0) {
+      window.alert(`${allMembers.length}명 중 ${failCount}명의 실적 알림 PDF 생성에 실패했습니다.`);
+    }
+  };
   // 1. Prepare Organization (조직별) Spending & Ratio Pie Chart Data
   const { orgPieData, totalOrgSpent, uniqueOrgCount } = useMemo(() => {
     const orgMap: Record<string, { used: number; count: number; budget: number }> = {};
@@ -140,6 +161,12 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
     return { stagePieData: data, totalStageMembers: total, stageMembersMap: membersMap };
   }, [customers, settings]);
+
+  // 사용률 단계별 회원 현황 표에 실제로 나열되는 순서(1→4단계) 그대로 모은 전체 회원 목록
+  const allStageMembers = useMemo(
+    () => ['stage1', 'stage2', 'stage3', 'stage4'].flatMap(id => stageMembersMap[id].members),
+    [stageMembersMap]
+  );
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
   // Derived entirely from 포인트 사용 및 실적 내역(transactions): cumulative from 1월
@@ -556,12 +583,23 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
               <p className="text-xs text-slate-500">1단계부터 4단계까지 순서대로 정리한 회원 목록</p>
             </div>
           </div>
-          <button
-            onClick={() => setExpandedPanel(null)}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => handleSendAllUsageAlerts(allStageMembers)}
+              disabled={isBulkSendingAlerts}
+              title="표에 나열된 전체 회원의 실적 안내 PDF를 한 번에 저장합니다"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            >
+              <BellRing className="w-3.5 h-3.5" />
+              <span>{isBulkSendingAlerts ? `저장 중... (${allStageMembers.length}명)` : '사용 실적 일괄 알림'}</span>
+            </button>
+            <button
+              onClick={() => setExpandedPanel(null)}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           {/* colgroup + table-layout: fixed로 컬럼 폭을 고정해, 단계 구분 행이 몇 번
