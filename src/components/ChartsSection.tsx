@@ -40,6 +40,18 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   const [expandedPanel, setExpandedPanel] = useState<'stage' | null>(null);
   const toggleStagePanel = () => setExpandedPanel(prev => (prev === 'stage' ? null : 'stage'));
 
+  // 제목(또는 조각/범례)을 클릭한 카드를 테두리 색으로 표시 — 어떤 카테고리를
+  // 선택했는지 한눈에 알 수 있도록 한다.
+  const [activeCard, setActiveCard] = useState<'org' | 'stage' | null>(null);
+  const handleSelectOrgCard = () => {
+    setActiveCard('org');
+    onSelectOrg?.();
+  };
+  const handleSelectStageCard = () => {
+    setActiveCard('stage');
+    toggleStagePanel();
+  };
+
   // "사용 실적 알림" 버튼 — 회원 1인용 실적 안내 PDF(배정/실적/잔액/사용률 +
   // 지금까지 사용한 포인트 승인 내역)를 대화상자 없이 바로 저장한다.
   const handleSendUsageAlert = (customer: Customer) => {
@@ -207,9 +219,13 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
     <>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="charts-overview-container">
       {/* Chart 1: 조직별 사용 비중 (원그래프 & 금액/비율 분리 표기) */}
-      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div
+        className={`bg-white rounded-xl p-5 shadow-xs flex flex-col justify-between transition-colors ${
+          activeCard === 'org' ? 'border-2 border-indigo-400' : 'border border-slate-200'
+        }`}
+      >
         <div
-          onClick={onSelectOrg}
+          onClick={handleSelectOrgCard}
           className="flex items-center justify-between mb-2 cursor-pointer select-none"
           title="클릭하면 조직별 포인트 사용 실적 및 지출 분석으로 이동합니다"
         >
@@ -247,7 +263,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                       fill={entry.color}
                       stroke="#ffffff"
                       strokeWidth={1.5}
-                      onClick={onSelectOrg}
+                      onClick={handleSelectOrgCard}
                     />
                   ))}
                 </Pie>
@@ -292,7 +308,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {orgPieData.map(item => (
             <div
               key={item.id}
-              onClick={onSelectOrg}
+              onClick={handleSelectOrgCard}
               className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
@@ -317,9 +333,13 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       </div>
 
       {/* Chart 2: 사용률 단계별 소속 회원 인원수 (1~4단계, 관리자 모드 기준 연동) */}
-      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div
+        className={`bg-white rounded-xl p-5 shadow-xs flex flex-col justify-between transition-colors ${
+          activeCard === 'stage' ? 'border-2 border-blue-400' : 'border border-slate-200'
+        }`}
+      >
         <div
-          onClick={toggleStagePanel}
+          onClick={handleSelectStageCard}
           className="flex items-center justify-between mb-2 cursor-pointer select-none"
           title="클릭하면 아래에 단계별 회원 목록이 펼쳐집니다"
         >
@@ -363,7 +383,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                         fill={entry.color}
                         stroke="#ffffff"
                         strokeWidth={1.5}
-                        onClick={toggleStagePanel}
+                        onClick={handleSelectStageCard}
                       />
                     ))}
                 </Pie>
@@ -399,7 +419,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {stagePieData.map(item => (
             <div
               key={item.id}
-              onClick={toggleStagePanel}
+              onClick={handleSelectStageCard}
               className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 cursor-pointer text-slate-700 transition-colors"
             >
               <div className="flex items-center gap-1.5 truncate">
@@ -540,7 +560,10 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
               <span>{isBulkSendingAlerts ? `저장 중... (${allStageMembers.length}명)` : '사용 실적 일괄 알림'}</span>
             </button>
             <button
-              onClick={() => setExpandedPanel(null)}
+              onClick={() => {
+                setExpandedPanel(null);
+                setActiveCard(prev => (prev === 'stage' ? null : prev));
+              }}
               className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
