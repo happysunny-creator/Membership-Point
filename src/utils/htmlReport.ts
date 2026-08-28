@@ -549,8 +549,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     </section>
 
     <div class="footer">
-      <span>남산 리더십센터 / 스마일즈 멤버십 포인트 관리 Dashboard</span>
-      <span>본 문서는 ${escapeHtml(generatedAt)} 기준 시스템 데이터를 바탕으로 자동 생성되었습니다.</span>
+      <span>본 문서는 멤버십 포인트 관리 시스템을 통해 자동으로 발송되었습니다.</span>
     </div>
   </div>
 </body>
