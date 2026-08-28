@@ -404,16 +404,6 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     color: #334155;
     margin: 4px 0 6px;
   }
-  .badge {
-    font-size: 12px;
-    font-weight: 700;
-    color: #4338ca;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    padding: 4px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
   .profile {
     display: flex;
     align-items: center;
