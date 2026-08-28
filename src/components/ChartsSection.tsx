@@ -554,63 +554,81 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="space-y-5">
-          {['stage1', 'stage2', 'stage3', 'stage4'].map(stageId => {
-            const stage = stageMembersMap[stageId];
-            const sortedMembers = [...stage.members].sort(
-              (a, b) => calculateBurnRate(b.usedPoints, b.totalBudget) - calculateBurnRate(a.usedPoints, a.totalBudget)
-            );
-            return (
-              <div key={stageId}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                  <h4 className="text-xs font-extrabold text-slate-900">{stage.name}</h4>
-                  <span
-                    className="text-[10px] font-extrabold px-1.5 py-0.2 rounded border"
-                    style={{ color: stage.color, backgroundColor: `${stage.color}14`, borderColor: `${stage.color}40` }}
-                  >
-                    {stage.members.length}명
-                  </span>
-                </div>
-                {sortedMembers.length === 0 ? (
-                  <p className="text-xs text-slate-300 pl-4.5">해당 단계에 속한 회원이 없습니다.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="text-slate-500 border-b border-slate-100">
-                          <th className="py-2 px-3 font-semibold">조직명</th>
-                          <th className="py-2 px-3 font-semibold">성함</th>
-                          <th className="py-2 px-3 font-semibold">직위</th>
-                          <th className="py-2 px-3 font-semibold text-right">배정 예산</th>
-                          <th className="py-2 px-3 font-semibold text-right">사용 실적</th>
-                          <th className="py-2 px-3 font-semibold text-right">사용률</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {sortedMembers.map(m => {
-                          const { name, position } = separateNameAndPosition(m.name, m.position);
-                          const rate = calculateBurnRate(m.usedPoints, m.totalBudget);
-                          return (
-                            <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="py-2 px-3 text-slate-700">{m.company || '-'}</td>
-                              <td className="py-2 px-3 font-bold text-slate-900">{name}</td>
-                              <td className="py-2 px-3 text-slate-600">{position || '-'}</td>
-                              <td className="py-2 px-3 text-right text-slate-700">{formatPoints(m.totalBudget)}</td>
-                              <td className="py-2 px-3 text-right font-semibold text-blue-700">{formatPoints(m.usedPoints)}</td>
-                              <td className="py-2 px-3 text-right font-extrabold" style={{ color: stage.color }}>
-                                {formatPercent(rate)}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto">
+          {/* colgroup + table-layout: fixed로 컬럼 폭을 고정해, 단계 구분 행이 몇 번
+              끼어들어도 조직명/성함/직위/배정 예산/사용 실적/사용률 컬럼 라인이
+              항상 정확히 맞도록 한다 (테이블을 단계별로 나누면 각자 폭이 달라져
+              라인이 어긋난다). */}
+          <table className="w-full text-left text-xs" style={{ tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '16%' }} />
+            </colgroup>
+            <thead>
+              <tr className="text-slate-500 border-b border-slate-200">
+                <th className="py-2 px-3 font-semibold">조직명</th>
+                <th className="py-2 px-3 font-semibold">성함</th>
+                <th className="py-2 px-3 font-semibold">직위</th>
+                <th className="py-2 px-3 font-semibold text-right">배정 예산</th>
+                <th className="py-2 px-3 font-semibold text-right">사용 실적</th>
+                <th className="py-2 px-3 font-semibold text-right">사용률</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {['stage1', 'stage2', 'stage3', 'stage4'].flatMap(stageId => {
+                const stage = stageMembersMap[stageId];
+                const sortedMembers = [...stage.members].sort(
+                  (a, b) => calculateBurnRate(b.usedPoints, b.totalBudget) - calculateBurnRate(a.usedPoints, a.totalBudget)
+                );
+                const rows = [
+                  <tr key={`${stageId}-header`}>
+                    <td
+                      colSpan={6}
+                      className="py-1.5 px-3 text-[11px] font-extrabold"
+                      style={{ color: stage.color, backgroundColor: `${stage.color}14` }}
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                        {stage.name}
+                        <span className="font-bold text-slate-500">{stage.members.length}명</span>
+                      </span>
+                    </td>
+                  </tr>,
+                ];
+                if (sortedMembers.length === 0) {
+                  rows.push(
+                    <tr key={`${stageId}-empty`}>
+                      <td colSpan={6} className="py-2 px-3 text-slate-300">
+                        해당 단계에 속한 회원이 없습니다.
+                      </td>
+                    </tr>
+                  );
+                } else {
+                  sortedMembers.forEach(m => {
+                    const { name, position } = separateNameAndPosition(m.name, m.position);
+                    const rate = calculateBurnRate(m.usedPoints, m.totalBudget);
+                    rows.push(
+                      <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-2 px-3 text-slate-700 truncate">{m.company || '-'}</td>
+                        <td className="py-2 px-3 font-bold text-slate-900 truncate">{name}</td>
+                        <td className="py-2 px-3 text-slate-600 truncate">{position || '-'}</td>
+                        <td className="py-2 px-3 text-right text-slate-700">{formatPoints(m.totalBudget)}</td>
+                        <td className="py-2 px-3 text-right font-semibold text-blue-700">{formatPoints(m.usedPoints)}</td>
+                        <td className="py-2 px-3 text-right font-extrabold" style={{ color: stage.color }}>
+                          {formatPercent(rate)}
+                        </td>
+                      </tr>
+                    );
+                  });
+                }
+                return rows;
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     )}
