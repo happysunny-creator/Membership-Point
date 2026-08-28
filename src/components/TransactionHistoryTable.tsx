@@ -139,16 +139,16 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
         </div>
       </div>
 
-      {/* Table Content: 조직명, 소속, 성함, 직위, 사용날짜, 사용처, 사용금액, 수정/휴지통 */}
+      {/* Table Content: 사용일시, 조직명, 소속, 성함, 직위, 사용처, 사용금액, 수정/휴지통 */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100/80 text-slate-700 border-b border-slate-200 font-bold select-none text-[12px]">
-              <th className="py-3 px-4 sm:px-6 text-left">조직명</th>
+              <th className="py-3 px-4 sm:px-6 text-left">사용일시</th>
+              <th className="py-3 px-4 text-left">조직명</th>
               <th className="py-3 px-4 text-left">소속 부서</th>
               <th className="py-3 px-4 text-left">성함</th>
               <th className="py-3 px-4 text-left">직위</th>
-              <th className="py-3 px-4 text-left">사용일시</th>
               <th className="py-3 px-4 text-left">사용처</th>
               <th className="py-3 px-4 sm:px-6 text-right">사용금액</th>
               <th className="py-3 px-4 text-center">관리</th>
@@ -185,17 +185,22 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 
                 return (
                   <tr key={txn.id} className="hover:bg-blue-50/30 transition-colors">
-                    {/* 1. 조직명 */}
+                    {/* 1. 사용일시 */}
                     <td className="py-3.5 px-4 sm:px-6 whitespace-nowrap">
+                      <span className="text-slate-700 font-mono text-[11px]">{usageDate}</span>
+                    </td>
+
+                    {/* 2. 조직명 */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <span className="font-bold text-slate-900">{company}</span>
                     </td>
 
-                    {/* 2. 소속 */}
+                    {/* 3. 소속 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span className="text-slate-600 font-medium">{department}</span>
                     </td>
 
-                    {/* 3. 성함 */}
+                    {/* 4. 성함 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <button
                         onClick={() => onSelectCustomerByName && onSelectCustomerByName(name)}
@@ -205,14 +210,9 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                       </button>
                     </td>
 
-                    {/* 4. 직위 */}
+                    {/* 5. 직위 */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span className="font-bold text-slate-900">{position || '-'}</span>
-                    </td>
-
-                    {/* 5. 사용날짜 */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="text-slate-700 font-mono text-[11px]">{usageDate}</span>
                     </td>
 
                     {/* 6. 사용처 */}
