@@ -105,7 +105,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm sm:text-base font-black text-slate-900">포인트 사용 및 실적 내역</h3>
+              <h3 className="text-sm sm:text-base font-black text-slate-900">포인트 사용 내역(상세)</h3>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                 총 {visibleTransactions.length}건
               </span>
