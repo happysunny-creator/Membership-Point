@@ -494,7 +494,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
       <div>
         <h1>${escapeHtml(reportTitle)}</h1>
         <p class="greeting">남산 리더십센터 / 스마일즈 멤버십 포인트 사용 현황을 안내드립니다.</p>
-        <p>기준일: ${escapeHtml(todayStr)} · 보고서 생성일시: ${escapeHtml(generatedAt)}</p>
+        <p>보고서 생성일시: ${escapeHtml(generatedAt)}</p>
       </div>
     </div>
 
