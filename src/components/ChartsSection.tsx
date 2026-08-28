@@ -12,18 +12,20 @@ import {
   Line,
   ComposedChart,
 } from 'recharts';
-import { Customer, Transaction } from '../types';
+import { Customer, Transaction, SystemSettings } from '../types';
 import { formatNumber, formatPoints, formatPercent } from '../utils/formatters';
-import { Layers, Store, TrendingUp } from 'lucide-react';
+import { Layers, Gauge, TrendingUp } from 'lucide-react';
 
 interface ChartsSectionProps {
   customers: Customer[];
   transactions: Transaction[];
+  settings?: SystemSettings;
 }
 
 export const ChartsSection: React.FC<ChartsSectionProps> = ({
   customers,
   transactions,
+  settings,
 }) => {
   // 1. Prepare Organization (조직별) Spending & Ratio Pie Chart Data
   const { orgPieData, totalOrgSpent, uniqueOrgCount } = useMemo(() => {
@@ -84,61 +86,39 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
     };
   }, [customers]);
 
-  // 2. Prepare Merchant (사용처별) Spending & Ratio Pie Chart Data
-  const { merchantPieData, totalMerchantSpend, uniqueMerchantCount } = useMemo(() => {
-    const map: Record<string, number> = {};
-    transactions.forEach(t => {
-      if (t.type === 'SPEND' && t.status === 'COMPLETED' && t.merchant) {
-        const m = t.merchant.trim() || '기타 사용처';
-        map[m] = (map[m] || 0) + t.amount;
-      }
-    });
+  // 2. Prepare 사용률 단계별(1~4단계) 소속 회원 인원수 — 관리자 모드의 포인트 관리기준
+  // (4단계 임계값)을 그대로 따르며, 기존 4색 체계(빨강/주황/초록/보라)를 사용한다.
+  const { stagePieData, totalStageMembers } = useMemo(() => {
+    const stage1Max = settings?.stage1MaxPercent ?? 30;
+    const stage2Max = settings?.stage2MaxPercent ?? 50;
+    const stage3Max = settings?.stage3MaxPercent ?? 70;
 
-    const sorted = Object.entries(map)
-      .map(([merchant, amount]) => ({ merchant, amount }))
-      .sort((a, b) => b.amount - a.amount);
-
-    const totalSpend = sorted.reduce((sum, item) => sum + item.amount, 0);
-    const uniqueCount = sorted.length;
-
-    // Top 5 merchants + '기타' for the rest
-    const topCount = 5;
-    const topList = sorted.slice(0, topCount);
-    const othersList = sorted.slice(topCount);
-    const othersSpend = othersList.reduce((sum, item) => sum + item.amount, 0);
-
-    const chartItems = [...topList];
-    if (othersSpend > 0) {
-      chartItems.push({
-        merchant: `기타 사용처 (${othersList.length}곳)`,
-        amount: othersSpend,
-      });
-    }
-
-    const merchantColors = [
-      '#2563eb', // blue-600
-      '#10b981', // emerald-500
-      '#f59e0b', // amber-500
-      '#8b5cf6', // purple-500
-      '#ec4899', // pink-500
-      '#06b6d4', // cyan-500
-      '#64748b', // slate-500
+    const stageDefs = [
+      { id: 'stage1', name: `1단계 (0%~${stage1Max}%)`, color: '#f43f5e', count: 0 },
+      { id: 'stage2', name: `2단계 (${stage1Max}%~${stage2Max}%)`, color: '#f97316', count: 0 },
+      { id: 'stage3', name: `3단계 (${stage2Max}%~${stage3Max}%)`, color: '#10b981', count: 0 },
+      { id: 'stage4', name: `4단계 (${stage3Max}% 이상)`, color: '#8b5cf6', count: 0 },
     ];
 
-    const data = chartItems.map((item, idx) => ({
-      id: `merchant-${idx}`,
-      name: item.merchant,
-      value: item.amount,
-      percent: totalSpend > 0 ? (item.amount / totalSpend) * 100 : 0,
-      color: merchantColors[idx % merchantColors.length],
+    customers.forEach(c => {
+      const rate = c.totalBudget > 0 ? (c.usedPoints / c.totalBudget) * 100 : 0;
+      if (rate >= stage3Max) stageDefs[3].count += 1;
+      else if (rate >= stage2Max) stageDefs[2].count += 1;
+      else if (rate >= stage1Max) stageDefs[1].count += 1;
+      else stageDefs[0].count += 1;
+    });
+
+    const total = customers.length;
+    const data = stageDefs.map(s => ({
+      id: s.id,
+      name: s.name,
+      value: s.count,
+      percent: total > 0 ? (s.count / total) * 100 : 0,
+      color: s.color,
     }));
 
-    return {
-      merchantPieData: data,
-      totalMerchantSpend: totalSpend,
-      uniqueMerchantCount: uniqueCount,
-    };
-  }, [transactions]);
+    return { stagePieData: data, totalStageMembers: total };
+  }, [customers, settings]);
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
   // Derived entirely from 포인트 사용 및 실적 내역(transactions): cumulative from 1월
@@ -276,29 +256,29 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
         </div>
       </div>
 
-      {/* Chart 2: 사용처별 포인트 사용 현황 (원그래프 & 금액/비율 분리 표기) */}
+      {/* Chart 2: 사용률 단계별 소속 회원 인원수 (1~4단계, 관리자 모드 기준 연동) */}
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Store className="w-4 h-4" />
+              <Gauge className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">사용처별 포인트 사용 현황</h3>
-              <p className="text-xs text-slate-500">주요 사용처(가맹점)별 금액 및 비중 분석</p>
+              <h3 className="text-sm font-bold text-slate-900">사용률 단계별 인원 현황</h3>
+              <p className="text-xs text-slate-500">1~4단계 사용률 구간별 소속 회원 인원수</p>
             </div>
           </div>
           <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-            총 {uniqueMerchantCount}개 사용처
+            총 {totalStageMembers}명
           </span>
         </div>
 
         <div className="h-60 relative flex items-center justify-center">
-          {merchantPieData.length > 0 ? (
+          {totalStageMembers > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>
                 <Pie
-                  data={merchantPieData}
+                  data={stagePieData.filter(s => s.value > 0)}
                   cx="50%"
                   cy="50%"
                   innerRadius={55}
@@ -307,19 +287,21 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                   dataKey="value"
                   cursor="pointer"
                 >
-                  {merchantPieData.map(entry => (
-                    <Cell
-                      key={`cell-${entry.id}`}
-                      fill={entry.color}
-                      stroke="#ffffff"
-                      strokeWidth={1.5}
-                    />
-                  ))}
+                  {stagePieData
+                    .filter(s => s.value > 0)
+                    .map(entry => (
+                      <Cell
+                        key={`cell-${entry.id}`}
+                        fill={entry.color}
+                        stroke="#ffffff"
+                        strokeWidth={1.5}
+                      />
+                    ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [
-                    `${formatPoints(value)} (${totalMerchantSpend > 0 ? formatPercent((value / totalMerchantSpend) * 100) : '00.0%'})`,
-                    '사용 금액',
+                  formatter={(value: number, _name, item) => [
+                    `${value}명 (${formatPercent(item.payload.percent)})`,
+                    item.payload.name,
                   ]}
                   contentStyle={{
                     backgroundColor: '#1e293b',
@@ -333,31 +315,32 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
               </RePieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-xs text-slate-400">사용처 데이터가 없습니다.</div>
+            <div className="text-xs text-slate-400">회원 데이터가 없습니다.</div>
           )}
 
           <div className="absolute flex flex-col items-center pointer-events-none">
-            <span className="text-[11px] text-slate-400 font-medium">사용처 합계</span>
-            <span className="text-xs font-extrabold text-slate-800">{formatNumber(totalMerchantSpend)}</span>
+            <span className="text-[11px] text-slate-400 font-medium">전체 인원</span>
+            <span className="text-xs font-extrabold text-slate-800">{totalStageMembers}명</span>
           </div>
         </div>
 
-        {/* 사용처별 금액 & 비율 명확 분리 표기 리스트 */}
-        <div className="grid grid-cols-1 gap-1.5 pt-3 border-t border-slate-100 max-h-32 overflow-y-auto text-xs">
-          {merchantPieData.map(item => (
+        {/* 단계별 인원수 & 비율 명확 분리 표기 리스트 */}
+        <div className="grid grid-cols-1 gap-1.5 pt-3 border-t border-slate-100 text-xs">
+          {stagePieData.map(item => (
             <div
               key={item.id}
               className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors"
             >
-              <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
+              <div className="flex items-center gap-1.5 truncate">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                 <span className="truncate font-medium text-slate-800 text-xs" title={item.name}>{item.name}</span>
               </div>
               <div className="flex items-center gap-2 text-right shrink-0">
-                <span className="font-extrabold text-slate-900 text-xs">
-                  {formatPoints(item.value)}
-                </span>
-                <span className="text-[11px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 min-w-[48px] text-center">
+                <span className="font-extrabold text-slate-900 text-xs">{item.value}명</span>
+                <span
+                  className="text-[11px] font-extrabold px-1.5 py-0.2 rounded border min-w-[48px] text-center"
+                  style={{ color: item.color, backgroundColor: `${item.color}14`, borderColor: `${item.color}40` }}
+                >
                   {formatPercent(item.percent)}
                 </span>
               </div>

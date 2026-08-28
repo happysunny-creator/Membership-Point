@@ -750,6 +750,7 @@ export default function App() {
             <ChartsSection
               customers={customers}
               transactions={transactions}
+              settings={settings}
             />
 
             {/* Organization Analytics Grid (조직별 포인트 사용 실적) */}
