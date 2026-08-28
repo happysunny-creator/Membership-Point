@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   PieChart as RePieChart,
   Pie,
@@ -13,19 +13,24 @@ import {
   ComposedChart,
 } from 'recharts';
 import { Customer, Transaction, SystemSettings } from '../types';
-import { formatNumber, formatPoints, formatPercent } from '../utils/formatters';
-import { Layers, Gauge, TrendingUp } from 'lucide-react';
+import { formatNumber, formatPoints, formatPercent, calculateBurnRate } from '../utils/formatters';
+import { separateNameAndPosition } from '../utils/nameParser';
+import { Layers, Gauge, TrendingUp, X, Users } from 'lucide-react';
 
 interface ChartsSectionProps {
   customers: Customer[];
   transactions: Transaction[];
   settings?: SystemSettings;
+  // 조직별 사용 비중 조각/범례를 선택했을 때 호출 — 상위(App)에서 조직별 상세 분석
+  // 섹션으로 스크롤 이동시키는 데 사용한다.
+  onSelectOrg?: (orgName: string) => void;
 }
 
 export const ChartsSection: React.FC<ChartsSectionProps> = ({
   customers,
   transactions,
   settings,
+  onSelectOrg,
 }) => {
   // 1. Prepare Organization (조직별) Spending & Ratio Pie Chart Data
   const { orgPieData, totalOrgSpent, uniqueOrgCount } = useMemo(() => {
@@ -88,37 +93,47 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
   // 2. Prepare 사용률 단계별(1~4단계) 소속 회원 인원수 — 관리자 모드의 포인트 관리기준
   // (4단계 임계값)을 그대로 따르며, 기존 4색 체계(빨강/주황/초록/보라)를 사용한다.
-  const { stagePieData, totalStageMembers } = useMemo(() => {
+  // 각 단계에 속한 회원 목록도 함께 모아둬서, 클릭 시 단계별 인원 리스트를 보여줄 수 있게 한다.
+  const { stagePieData, totalStageMembers, stageMembersMap } = useMemo(() => {
     const stage1Max = settings?.stage1MaxPercent ?? 30;
     const stage2Max = settings?.stage2MaxPercent ?? 50;
     const stage3Max = settings?.stage3MaxPercent ?? 70;
 
     const stageDefs = [
-      { id: 'stage1', name: `1단계 (0%~${stage1Max}%)`, color: '#f43f5e', count: 0 },
-      { id: 'stage2', name: `2단계 (${stage1Max}%~${stage2Max}%)`, color: '#f97316', count: 0 },
-      { id: 'stage3', name: `3단계 (${stage2Max}%~${stage3Max}%)`, color: '#10b981', count: 0 },
-      { id: 'stage4', name: `4단계 (${stage3Max}% 이상)`, color: '#8b5cf6', count: 0 },
+      { id: 'stage1', name: `1단계 (0%~${stage1Max}%)`, color: '#f43f5e', members: [] as Customer[] },
+      { id: 'stage2', name: `2단계 (${stage1Max}%~${stage2Max}%)`, color: '#f97316', members: [] as Customer[] },
+      { id: 'stage3', name: `3단계 (${stage2Max}%~${stage3Max}%)`, color: '#10b981', members: [] as Customer[] },
+      { id: 'stage4', name: `4단계 (${stage3Max}% 이상)`, color: '#8b5cf6', members: [] as Customer[] },
     ];
 
     customers.forEach(c => {
       const rate = c.totalBudget > 0 ? (c.usedPoints / c.totalBudget) * 100 : 0;
-      if (rate >= stage3Max) stageDefs[3].count += 1;
-      else if (rate >= stage2Max) stageDefs[2].count += 1;
-      else if (rate >= stage1Max) stageDefs[1].count += 1;
-      else stageDefs[0].count += 1;
+      if (rate >= stage3Max) stageDefs[3].members.push(c);
+      else if (rate >= stage2Max) stageDefs[2].members.push(c);
+      else if (rate >= stage1Max) stageDefs[1].members.push(c);
+      else stageDefs[0].members.push(c);
     });
 
     const total = customers.length;
     const data = stageDefs.map(s => ({
       id: s.id,
       name: s.name,
-      value: s.count,
-      percent: total > 0 ? (s.count / total) * 100 : 0,
+      value: s.members.length,
+      percent: total > 0 ? (s.members.length / total) * 100 : 0,
       color: s.color,
     }));
+    const membersMap: Record<string, { name: string; color: string; members: Customer[] }> = {};
+    stageDefs.forEach(s => {
+      membersMap[s.id] = { name: s.name, color: s.color, members: s.members };
+    });
 
-    return { stagePieData: data, totalStageMembers: total };
+    return { stagePieData: data, totalStageMembers: total, stageMembersMap: membersMap };
   }, [customers, settings]);
+
+  // 사용률 단계별 인원 현황에서 클릭으로 선택한 단계 — 선택 시 해당 단계 인원 목록을
+  // 모달로 보여준다 (그리드 카드 높이에 영향을 주지 않도록 모달 방식 사용).
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const selectedStage = selectedStageId ? stageMembersMap[selectedStageId] : null;
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
   // Derived entirely from 포인트 사용 및 실적 내역(transactions): cumulative from 1월
@@ -152,6 +167,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   const latestData = monthlyTrendData[monthlyTrendData.length - 1];
 
   return (
+    <>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="charts-overview-container">
       {/* Chart 1: 조직별 사용 비중 (원그래프 & 금액/비율 분리 표기) */}
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
@@ -190,10 +206,12 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                       fill={entry.color}
                       stroke="#ffffff"
                       strokeWidth={1.5}
+                      onClick={() => onSelectOrg?.(entry.name)}
                     />
                   ))}
                 </Pie>
                 <Tooltip
+                  wrapperStyle={{ zIndex: 50 }}
                   content={({ active, payload }) => {
                     if (!active || !payload || payload.length === 0) return null;
                     const entry = payload[0].payload as (typeof orgPieData)[number];
@@ -233,7 +251,8 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {orgPieData.map(item => (
             <div
               key={item.id}
-              className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors"
+              onClick={() => onSelectOrg?.(item.name)}
+              className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
@@ -295,10 +314,12 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                         fill={entry.color}
                         stroke="#ffffff"
                         strokeWidth={1.5}
+                        onClick={() => setSelectedStageId(entry.id)}
                       />
                     ))}
                 </Pie>
                 <Tooltip
+                  wrapperStyle={{ zIndex: 50 }}
                   formatter={(value: number, _name, item) => [
                     `${value}명 (${formatPercent(item.payload.percent)})`,
                     item.payload.name,
@@ -329,7 +350,10 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {stagePieData.map(item => (
             <div
               key={item.id}
-              className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors"
+              onClick={() => item.value > 0 && setSelectedStageId(item.id)}
+              className={`flex items-center justify-between px-2 py-1 rounded transition-colors ${
+                item.value > 0 ? 'hover:bg-slate-50 cursor-pointer text-slate-700' : 'text-slate-300 cursor-default'
+              }`}
             >
               <div className="flex items-center gap-1.5 truncate">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
@@ -444,5 +468,68 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
         </div>
       </div>
     </div>
+
+    {/* 사용률 단계별 인원 리스트 모달 — 그리드 카드 높이에 영향을 주지 않도록 모달로 표시 */}
+    {selectedStage && (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[85vh] flex flex-col">
+          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
+            <div className="flex items-center space-x-2.5">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: `${selectedStage.color}1a`, color: selectedStage.color }}
+              >
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">{selectedStage.name} 인원 목록</h2>
+                <p className="text-xs text-slate-500">총 {selectedStage.members.length}명</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedStageId(null)}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="overflow-y-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 bg-slate-50 z-10">
+                <tr className="text-slate-500 border-b border-slate-200">
+                  <th className="py-2.5 px-4 font-semibold">조직명</th>
+                  <th className="py-2.5 px-3 font-semibold">성함</th>
+                  <th className="py-2.5 px-3 font-semibold">직위</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">배정 예산</th>
+                  <th className="py-2.5 px-3 font-semibold text-right">사용 실적</th>
+                  <th className="py-2.5 px-4 font-semibold text-right">사용률</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[...selectedStage.members]
+                  .sort((a, b) => calculateBurnRate(b.usedPoints, b.totalBudget) - calculateBurnRate(a.usedPoints, a.totalBudget))
+                  .map(m => {
+                    const { name, position } = separateNameAndPosition(m.name, m.position);
+                    const rate = calculateBurnRate(m.usedPoints, m.totalBudget);
+                    return (
+                      <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-2.5 px-4 text-slate-700">{m.company || '-'}</td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{name}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{position || '-'}</td>
+                        <td className="py-2.5 px-3 text-right text-slate-700">{formatPoints(m.totalBudget)}</td>
+                        <td className="py-2.5 px-3 text-right font-semibold text-blue-700">{formatPoints(m.usedPoints)}</td>
+                        <td className="py-2.5 px-4 text-right font-extrabold" style={{ color: selectedStage.color }}>
+                          {formatPercent(rate)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
