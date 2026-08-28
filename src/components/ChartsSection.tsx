@@ -21,17 +21,19 @@ interface ChartsSectionProps {
   customers: Customer[];
   transactions: Transaction[];
   settings?: SystemSettings;
-  // 조직별 사용 비중 조각/범례를 선택했을 때 호출 — 상위(App)에서 조직별 상세 분석
-  // 섹션으로 스크롤 이동시키는 데 사용한다.
-  onSelectOrg?: (orgName: string) => void;
 }
 
 export const ChartsSection: React.FC<ChartsSectionProps> = ({
   customers,
   transactions,
   settings,
-  onSelectOrg,
 }) => {
+  // 차트 카드(조직별 사용 비중 / 사용률 단계별 인원 현황)를 클릭하면 3개 차트 그리드
+  // 바로 아래에 해당 상세 패널이 인라인으로 펼쳐진다 (그리드 카드 자체의 높이에는
+  // 영향을 주지 않도록 그리드 바깥에 렌더링).
+  const [expandedPanel, setExpandedPanel] = useState<'org' | 'stage' | null>(null);
+  const toggleOrgPanel = () => setExpandedPanel(prev => (prev === 'org' ? null : 'org'));
+  const toggleStagePanel = () => setExpandedPanel(prev => (prev === 'stage' ? null : 'stage'));
   // 1. Prepare Organization (조직별) Spending & Ratio Pie Chart Data
   const { orgPieData, totalOrgSpent, uniqueOrgCount } = useMemo(() => {
     const orgMap: Record<string, { used: number; count: number; budget: number }> = {};
@@ -130,11 +132,6 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
     return { stagePieData: data, totalStageMembers: total, stageMembersMap: membersMap };
   }, [customers, settings]);
 
-  // 사용률 단계별 인원 현황에서 클릭으로 선택한 단계 — 선택 시 해당 단계 인원 목록을
-  // 모달로 보여준다 (그리드 카드 높이에 영향을 주지 않도록 모달 방식 사용).
-  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
-  const selectedStage = selectedStageId ? stageMembersMap[selectedStageId] : null;
-
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
   // Derived entirely from 포인트 사용 및 실적 내역(transactions): cumulative from 1월
   // through the current calendar month, which is marked (현재).
@@ -171,9 +168,17 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" id="charts-overview-container">
       {/* Chart 1: 조직별 사용 비중 (원그래프 & 금액/비율 분리 표기) */}
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
-        <div className="flex items-center justify-between mb-2">
+        <div
+          onClick={toggleOrgPanel}
+          className="flex items-center justify-between mb-2 cursor-pointer select-none"
+          title="클릭하면 아래에 조직별 상세 분석이 펼쳐집니다"
+        >
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                expandedPanel === 'org' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
+              }`}
+            >
               <Layers className="w-4 h-4" />
             </div>
             <div>
@@ -206,7 +211,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                       fill={entry.color}
                       stroke="#ffffff"
                       strokeWidth={1.5}
-                      onClick={() => onSelectOrg?.(entry.name)}
+                      onClick={toggleOrgPanel}
                     />
                   ))}
                 </Pie>
@@ -251,7 +256,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {orgPieData.map(item => (
             <div
               key={item.id}
-              onClick={() => onSelectOrg?.(item.name)}
+              onClick={toggleOrgPanel}
               className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-1.5 truncate max-w-[130px] sm:max-w-[150px]">
@@ -277,9 +282,17 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
 
       {/* Chart 2: 사용률 단계별 소속 회원 인원수 (1~4단계, 관리자 모드 기준 연동) */}
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
-        <div className="flex items-center justify-between mb-2">
+        <div
+          onClick={toggleStagePanel}
+          className="flex items-center justify-between mb-2 cursor-pointer select-none"
+          title="클릭하면 아래에 단계별 회원 목록이 펼쳐집니다"
+        >
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                expandedPanel === 'stage' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'
+              }`}
+            >
               <Gauge className="w-4 h-4" />
             </div>
             <div>
@@ -314,7 +327,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
                         fill={entry.color}
                         stroke="#ffffff"
                         strokeWidth={1.5}
-                        onClick={() => setSelectedStageId(entry.id)}
+                        onClick={toggleStagePanel}
                       />
                     ))}
                 </Pie>
@@ -350,10 +363,8 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           {stagePieData.map(item => (
             <div
               key={item.id}
-              onClick={() => item.value > 0 && setSelectedStageId(item.id)}
-              className={`flex items-center justify-between px-2 py-1 rounded transition-colors ${
-                item.value > 0 ? 'hover:bg-slate-50 cursor-pointer text-slate-700' : 'text-slate-300 cursor-default'
-              }`}
+              onClick={toggleStagePanel}
+              className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 cursor-pointer text-slate-700 transition-colors"
             >
               <div className="flex items-center gap-1.5 truncate">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
@@ -469,64 +480,137 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       </div>
     </div>
 
-    {/* 사용률 단계별 인원 리스트 모달 — 그리드 카드 높이에 영향을 주지 않도록 모달로 표시 */}
-    {selectedStage && (
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[85vh] flex flex-col">
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
-            <div className="flex items-center space-x-2.5">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: `${selectedStage.color}1a`, color: selectedStage.color }}
-              >
-                <Users className="w-4 h-4" />
+    {/* 조직별 사용 비중 카드를 클릭하면 펼쳐지는 조직별 상세 분석 패널 (그리드 바깥, 전체 너비) */}
+    {expandedPanel === 'org' && (
+      <div className="mt-4 bg-white rounded-xl p-5 border border-slate-200 shadow-xs animate-in fade-in duration-150">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">조직별 포인트 사용 실적 및 지출 분석</h3>
+              <p className="text-xs text-slate-500">조직별 배정 예산, 사용 실적, 잔여 포인트 및 사용률</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setExpandedPanel(null)}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {orgPieData.map(org => (
+            <div key={org.id} className="rounded-xl border border-slate-200 p-4" style={{ borderTopColor: org.color, borderTopWidth: 3 }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: org.color }} />
+                  <span className="text-xs font-extrabold text-slate-900 truncate" title={org.name}>{org.name}</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold shrink-0">{org.count}명</span>
               </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">{selectedStage.name} 인원 목록</h2>
-                <p className="text-xs text-slate-500">총 {selectedStage.members.length}명</p>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">배정 예산</span>
+                  <span className="font-bold text-slate-700">{formatPoints(org.budget)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">사용 실적</span>
+                  <span className="font-bold text-blue-700">{formatPoints(org.value)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">잔여 포인트</span>
+                  <span className="font-bold text-emerald-700">{formatPoints(org.remaining)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <span className="text-slate-400">사용률</span>
+                  <span className="font-extrabold" style={{ color: org.color }}>{formatPercent(org.burnRate)}</span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setSelectedStageId(null)}
-              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* 사용률 단계별 인원 현황 카드를 클릭하면 펼쳐지는 1~4단계 순서의 인원 리스트 패널 */}
+    {expandedPanel === 'stage' && (
+      <div className="mt-4 bg-white rounded-xl p-5 border border-slate-200 shadow-xs animate-in fade-in duration-150">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">사용률 단계별 회원 현황</h3>
+              <p className="text-xs text-slate-500">1단계부터 4단계까지 순서대로 정리한 회원 목록</p>
+            </div>
           </div>
-          <div className="overflow-y-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-slate-50 z-10">
-                <tr className="text-slate-500 border-b border-slate-200">
-                  <th className="py-2.5 px-4 font-semibold">조직명</th>
-                  <th className="py-2.5 px-3 font-semibold">성함</th>
-                  <th className="py-2.5 px-3 font-semibold">직위</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">배정 예산</th>
-                  <th className="py-2.5 px-3 font-semibold text-right">사용 실적</th>
-                  <th className="py-2.5 px-4 font-semibold text-right">사용률</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {[...selectedStage.members]
-                  .sort((a, b) => calculateBurnRate(b.usedPoints, b.totalBudget) - calculateBurnRate(a.usedPoints, a.totalBudget))
-                  .map(m => {
-                    const { name, position } = separateNameAndPosition(m.name, m.position);
-                    const rate = calculateBurnRate(m.usedPoints, m.totalBudget);
-                    return (
-                      <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-2.5 px-4 text-slate-700">{m.company || '-'}</td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900">{name}</td>
-                        <td className="py-2.5 px-3 text-slate-600">{position || '-'}</td>
-                        <td className="py-2.5 px-3 text-right text-slate-700">{formatPoints(m.totalBudget)}</td>
-                        <td className="py-2.5 px-3 text-right font-semibold text-blue-700">{formatPoints(m.usedPoints)}</td>
-                        <td className="py-2.5 px-4 text-right font-extrabold" style={{ color: selectedStage.color }}>
-                          {formatPercent(rate)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
+          <button
+            onClick={() => setExpandedPanel(null)}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="space-y-5">
+          {['stage1', 'stage2', 'stage3', 'stage4'].map(stageId => {
+            const stage = stageMembersMap[stageId];
+            const sortedMembers = [...stage.members].sort(
+              (a, b) => calculateBurnRate(b.usedPoints, b.totalBudget) - calculateBurnRate(a.usedPoints, a.totalBudget)
+            );
+            return (
+              <div key={stageId}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                  <h4 className="text-xs font-extrabold text-slate-900">{stage.name}</h4>
+                  <span
+                    className="text-[10px] font-extrabold px-1.5 py-0.2 rounded border"
+                    style={{ color: stage.color, backgroundColor: `${stage.color}14`, borderColor: `${stage.color}40` }}
+                  >
+                    {stage.members.length}명
+                  </span>
+                </div>
+                {sortedMembers.length === 0 ? (
+                  <p className="text-xs text-slate-300 pl-4.5">해당 단계에 속한 회원이 없습니다.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-500 border-b border-slate-100">
+                          <th className="py-2 px-3 font-semibold">조직명</th>
+                          <th className="py-2 px-3 font-semibold">성함</th>
+                          <th className="py-2 px-3 font-semibold">직위</th>
+                          <th className="py-2 px-3 font-semibold text-right">배정 예산</th>
+                          <th className="py-2 px-3 font-semibold text-right">사용 실적</th>
+                          <th className="py-2 px-3 font-semibold text-right">사용률</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {sortedMembers.map(m => {
+                          const { name, position } = separateNameAndPosition(m.name, m.position);
+                          const rate = calculateBurnRate(m.usedPoints, m.totalBudget);
+                          return (
+                            <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                              <td className="py-2 px-3 text-slate-700">{m.company || '-'}</td>
+                              <td className="py-2 px-3 font-bold text-slate-900">{name}</td>
+                              <td className="py-2 px-3 text-slate-600">{position || '-'}</td>
+                              <td className="py-2 px-3 text-right text-slate-700">{formatPoints(m.totalBudget)}</td>
+                              <td className="py-2 px-3 text-right font-semibold text-blue-700">{formatPoints(m.usedPoints)}</td>
+                              <td className="py-2 px-3 text-right font-extrabold" style={{ color: stage.color }}>
+                                {formatPercent(rate)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     )}
