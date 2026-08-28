@@ -468,7 +468,6 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     color: #475569;
     font-weight: 700;
     font-size: 12px;
-    text-align: center;
   }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:hover { background: #f8fafc; }
@@ -540,7 +539,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
           <tr>
             <th>사용일시</th>
             <th>사용처</th>
-            <th>사용금액</th>
+            <th class="num">사용금액</th>
             <th>승인상태</th>
           </tr>
         </thead>
