@@ -49,9 +49,13 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
   onOpenAddTransactionForCustomer,
   onOpenAdjustBudgetForCustomer,
 }) => {
-  // 선택 가능한 기준일 목록: 실제 사용(SPEND) 실적이 발생한 날짜만 최신순으로 제공
+  // 선택 가능한 기준일 목록: 실제 사용(SPEND) 실적이 발생한 날짜 + 시스템을 실행 중인
+  // 오늘 날짜(아직 실적이 없어도 항상 선택 가능하도록)를 최신순으로 제공
   const availableAsOfDates = useMemo(() => {
     const dates = new Set<string>();
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    dates.add(today);
     transactions.forEach(t => {
       if (t.type === 'SPEND') dates.add(t.timestamp.slice(0, 10));
     });
