@@ -45,11 +45,12 @@ const AVATAR_COLORS = [
 ];
 
 const BUDGET_PRESETS = [
-  { label: '1백만P', value: 1000000 },
-  { label: '3백만P', value: 3000000 },
-  { label: '5백만P', value: 5000000 },
-  { label: '10백만P', value: 10000000 },
-  { label: '20백만P', value: 20000000 },
+  { label: '100만P', value: 1000000 },
+  { label: '200만P', value: 2000000 },
+  { label: '300만P', value: 3000000 },
+  { label: '400만P', value: 4000000 },
+  { label: '500만P', value: 5000000 },
+  { label: '1000만P', value: 10000000 },
 ];
 
 export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
