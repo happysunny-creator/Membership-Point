@@ -23,7 +23,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [customerId, setCustomerId] = useState<string>('');
   const [amount, setAmount] = useState<number | ''>('');
   const [merchant, setMerchant] = useState<string>('남산리더십센터');
-  const [description, setDescription] = useState<string>('');
+  const [description, setDescription] = useState<string>('외부 고객 미팅');
 
   const uniqueOrgs = useMemo(() => {
     const orgs = new Set<string>();
@@ -74,7 +74,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       amount: Number(amount),
       categoryId: 'shopping',
       categoryName: '기타',
-      description: description || '포인트 사용',
+      description: description || '외부 고객 미팅',
       merchant,
       orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
       timestamp: formattedDate,
