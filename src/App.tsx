@@ -18,7 +18,7 @@ import {
   sortByOrgPriority,
 } from './utils/formatters';
 import { separateNameAndPosition } from './utils/nameParser';
-import { loadPersistedState, savePersistedState } from './utils/persistence';
+import { loadPersistedState, savePersistedState, downloadBackupFile, parseBackupFile } from './utils/persistence';
 import { downloadStatusReportHtml, downloadStatusReportPdf } from './utils/htmlReport';
 
 import { Navbar } from './components/Navbar';
@@ -66,6 +66,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<MainTab>('budget');
   const [settings, setSettings] = useState<SystemSettings>(persisted?.settings ?? INITIAL_SETTINGS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // 백업 파일을 불러올 때마다 값을 바꿔 <SettingsView key={...}>를 강제로 다시 마운트한다.
+  // SettingsView의 "조직 목록 관리" 초안 목록은 마운트 시점의 settings로만 초기화되므로,
+  // 관리자 모드 화면을 이미 열어둔 채로 백업을 불러오면(리마운트가 없으면) 예전 조직명이
+  // 새로 불러온 목록에 뒤섞여 남아있는 것처럼 보일 수 있다.
+  const [settingsViewKey, setSettingsViewKey] = useState(0);
 
   // Keep the point/currency unit used by formatPoints() in sync with settings
   useEffect(() => {
@@ -346,6 +352,35 @@ export default function App() {
       setCustomers([]);
       setTransactions([]);
       handleResetFilters();
+    }
+  };
+
+  // 전체 데이터 백업 다운로드 — 회원·거래내역·설정(조직 우선순위, 단계 기준 등)까지 전부
+  // 담은 파일 하나를 내려받는다. 이 앱은 각 PC의 localStorage에만 데이터를 저장하므로,
+  // 다른 PC에서 완전히 동일한 화면을 보려면 exe와 함께 이 백업 파일을 전달해야 한다.
+  const handleExportBackup = () => {
+    downloadBackupFile({ customers, transactions, settings });
+  };
+
+  // 전체 데이터 백업 불러오기 — 현재 PC의 데이터를 백업 파일 내용으로 완전히 교체한다.
+  const handleImportBackup = async (file: File) => {
+    try {
+      const restored = await parseBackupFile(file);
+      const confirmed = confirm(
+        `백업 파일을 불러오면 현재 데이터(회원 ${customers.length}명, 거래 ${transactions.length}건)가 ` +
+          `백업 시점의 데이터(회원 ${restored.customers.length}명, 거래 ${restored.transactions.length}건)로 완전히 교체됩니다. 계속할까요?`
+      );
+      if (!confirmed) return;
+
+      setCustomers(restored.customers);
+      setTransactions(restored.transactions);
+      setSettings(restored.settings);
+      setSettingsViewKey(k => k + 1);
+      handleResetFilters();
+      setToastMessage('백업 파일을 성공적으로 불러왔습니다. 다른 PC와 동일한 데이터로 복원되었습니다.');
+      setTimeout(() => setToastMessage(null), 5000);
+    } catch (err: any) {
+      alert(err?.message || '백업 파일을 불러오는 중 오류가 발생했습니다.');
     }
   };
 
@@ -781,6 +816,7 @@ export default function App() {
         {/* ================= TAB 3: 설정 (System & Policy Settings) ================= */}
         {activeTab === 'settings' && (
           <SettingsView
+            key={settingsViewKey}
             settings={settings}
             onUpdateSettings={newSet => {
               setSettings(newSet);
@@ -796,6 +832,8 @@ export default function App() {
             onExportCSV={handleExportCSV}
             onExportHtmlReport={handleExportHtmlReport}
             onExportPdfReport={handleExportPdfReport}
+            onExportBackup={handleExportBackup}
+            onImportBackup={handleImportBackup}
             totalCustomers={customers.length}
             totalTransactions={transactions.length}
           />

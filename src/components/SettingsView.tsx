@@ -42,6 +42,8 @@ interface SettingsViewProps {
   onExportCSV: () => void;
   onExportHtmlReport: () => void;
   onExportPdfReport: () => void;
+  onExportBackup: () => void;
+  onImportBackup: (file: File) => void;
   totalCustomers: number;
   totalTransactions: number;
 }
@@ -58,6 +60,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onExportCSV,
   onExportHtmlReport,
   onExportPdfReport,
+  onExportBackup,
+  onImportBackup,
   totalCustomers,
   totalTransactions,
 }) => {
@@ -195,6 +199,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setIsOrgExcelParsing(false);
       e.target.value = '';
     }
+  };
+
+  // 전체 데이터 백업 파일(회원+거래내역+설정) 불러오기 — 다른 PC에서 내려받은 백업 파일을
+  // 선택하면 onImportBackup(App.tsx)이 검증 후 현재 데이터를 그대로 교체한다.
+  const backupInputRef = useRef<HTMLInputElement>(null);
+  const handleBackupButtonClick = () => {
+    backupInputRef.current?.click();
+  };
+  const handleBackupFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onImportBackup(file);
+    e.target.value = '';
   };
 
   // Inline rename for an organization in the priority list. Since every other screen in the
@@ -1108,6 +1124,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span className="text-[10px] text-rose-500">리셋</span>
                 </button>
               </div>
+            </div>
+
+            {/* 전체 데이터 백업 및 복원 — 이 앱은 각 PC의 브라우저 저장소(localStorage)에만
+                데이터를 저장하므로, 다른 PC에서 완전히 동일한 화면(회원·거래내역·조직 우선순위·
+                단계 기준까지)을 보려면 exe와 함께 이 백업 파일을 전달해야 한다. 엑셀 내보내기는
+                회원/실적만 담기고 설정은 빠지는 것과 다르다. */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-2xs space-y-5">
+              <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
+                <FileDown className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">전체 데이터 백업 및 복원</h3>
+                  <p className="text-xs text-slate-500">
+                    회원, 거래내역, 조직 우선순위·단계 기준 등 설정까지 전부 담아 다른 PC로 그대로 옮길 수 있습니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={onExportBackup}
+                  className="p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 rounded-xl text-xs font-bold text-indigo-800 flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4 text-indigo-600" />
+                    <span>전체 데이터 백업 다운로드</span>
+                  </div>
+                  <span className="text-[11px] text-indigo-600">.json</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBackupButtonClick}
+                  className="p-3 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl text-xs font-bold text-amber-800 flex items-center justify-between transition-colors shadow-2xs cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4 text-amber-600" />
+                    <span>백업 파일 불러오기</span>
+                  </div>
+                  <span className="text-[11px] text-amber-600">.json</span>
+                </button>
+                <input
+                  ref={backupInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleBackupFileChange}
+                />
+              </div>
+
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>백업 파일을 불러오면 현재 이 PC에 있는 데이터가 백업 시점의 데이터로 완전히 교체됩니다.</span>
+              </p>
             </div>
           </div>
           </div>
