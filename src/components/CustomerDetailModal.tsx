@@ -7,6 +7,7 @@ import {
   getStatusBadge,
   calculateBurnRate,
   getBurnRateColorClass,
+  getTransactionContentLabel,
 } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
 import {
@@ -263,7 +264,9 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             {txn.timestamp}
                           </td>
                           <td className="py-2.5 px-3">
-                            <div className="font-semibold text-slate-800">{txn.description}</div>
+                            <div className="font-semibold text-slate-800" title={txn.description}>
+                              {getTransactionContentLabel(txn)}
+                            </div>
                             <div className="text-[11px] text-slate-400">{txn.merchant}</div>
                           </td>
                           <td className="py-2.5 px-4 text-right font-extrabold whitespace-nowrap">

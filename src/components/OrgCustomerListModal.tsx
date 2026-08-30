@@ -5,6 +5,7 @@ import {
   formatPercent,
   calculateBurnRate,
   getBurnRateColorClass,
+  getTransactionContentLabel,
 } from '../utils/formatters';
 import { separateNameAndPosition } from '../utils/nameParser';
 import {
@@ -339,7 +340,7 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                               {txn.merchant}
                             </td>
                             <td className="py-2.5 px-3 text-slate-600 truncate max-w-xs" title={txn.description}>
-                              {txn.description}
+                              {getTransactionContentLabel(txn)}
                             </td>
                             <td className="py-2.5 px-4 text-right whitespace-nowrap">
                               <span
