@@ -185,13 +185,12 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   );
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
-  // 이 표의 "누적 소진 금액" 마지막 값은 상단 KPI의 "총 포인트 사용실적"(customers의
-  // usedPoints 합계)과 항상 정확히 일치해야 한다. 월별 breakdown은 거래 내역에서 직접
-  // 집계하되(SPEND는 더하고 RECHARGE/REFUND는 빼는 순사용량, COMPLETED만) — 엑셀로
-  // 업로드된 실적의 날짜 형식이 예상과 달라 "YYYY-MM"으로 안 걸리거나, 올해 1월 이전
-  // 데이터가 섞여 있으면 월별 구간 밖으로 빠질 수 있다. 이런 구간 밖 실적(및 회원별
-  // 순사용량 하한 0 클램프 등으로 인한 오차)은 모두 "이월분"으로 그래프 시작점 누적치에
-  // 얹어서, 마지막 달 누적치가 총 포인트 사용실적과 항상 딱 맞아떨어지게 만든다.
+  // "누적 소진 금액"은 해당 월까지 실제 거래 내역을 그대로 누적한 값이어야 한다(월 합계가
+  // 0인 달인데 누적치가 이미 최종 총액에 가깝게 표시되는 건 잘못된 것). 그래서 별도
+  // 보정값을 강제로 얹지 않고, 거래 내역(SPEND는 더하고 RECHARGE/REFUND는 빼는 순사용량,
+  // COMPLETED만)만으로 월별·누적 금액을 계산한다. 올해 1월 이전(작년 등)에 실제로 발생한
+  // 거래만 그래프가 시작되는 1월 누적치에 정당하게 이월해 반영하고, 그 외에는 순수하게
+  // 월별로 쌓아 올린다.
   const monthlyTrendData = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -202,10 +201,10 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       const label = m === currentMonth ? `${m}월 (현재)` : `${m}월`;
       return { key, label };
     });
-    const monthKeySet = new Set(months.map(m => m.key));
+    const firstMonthKey = months[0].key;
 
     const netByMonth: Record<string, number> = {};
-    let netWithinRange = 0;
+    let carryOverBeforeRange = 0; // 올해 1월 이전에 실제로 발생한 거래의 이월분
     transactions.forEach(t => {
       if (t.status !== 'COMPLETED') return;
       let delta = 0;
@@ -214,23 +213,20 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       else return;
 
       const key = t.timestamp.slice(0, 7); // "YYYY-MM"
-      if (monthKeySet.has(key)) {
+      if (key < firstMonthKey) {
+        carryOverBeforeRange += delta;
+      } else {
         netByMonth[key] = (netByMonth[key] || 0) + delta;
-        netWithinRange += delta;
       }
     });
 
-    // 상단 "총 포인트 사용실적" KPI와 동일한 값 — 항상 정답이며, 여기서 이월분을
-    // 역산해 마지막 누적치가 이 값과 정확히 같아지도록 보정한다.
-    const totalUsed = customers.reduce((sum, c) => sum + c.usedPoints, 0);
-    let runningTotal = totalUsed - netWithinRange;
-
+    let runningTotal = carryOverBeforeRange;
     return months.map(({ key, label }) => {
       const monthlySpend = netByMonth[key] || 0;
       runningTotal += monthlySpend;
       return { month: label, monthlySpend, cumulativeSpend: runningTotal };
     });
-  }, [transactions, customers]);
+  }, [transactions]);
 
   const latestData = monthlyTrendData[monthlyTrendData.length - 1];
 
