@@ -609,7 +609,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                   type="text"
                   value={pointOpReason}
                   onChange={e => setPointOpReason(e.target.value)}
-                  placeholder="예: 우수 성과 특별 포인트 지급"
+                  placeholder="예: 포인트 추가 배정"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
