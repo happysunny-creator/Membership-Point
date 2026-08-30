@@ -185,8 +185,13 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   );
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
-  // Derived entirely from 포인트 사용 및 실적 내역(transactions): cumulative from 1월
-  // through the current calendar month, which is marked (현재).
+  // 이 표의 "누적 소진 금액" 마지막 값은 상단 KPI의 "총 포인트 사용실적"(customers의
+  // usedPoints 합계)과 항상 정확히 일치해야 한다. 월별 breakdown은 거래 내역에서 직접
+  // 집계하되(SPEND는 더하고 RECHARGE/REFUND는 빼는 순사용량, COMPLETED만) — 엑셀로
+  // 업로드된 실적의 날짜 형식이 예상과 달라 "YYYY-MM"으로 안 걸리거나, 올해 1월 이전
+  // 데이터가 섞여 있으면 월별 구간 밖으로 빠질 수 있다. 이런 구간 밖 실적(및 회원별
+  // 순사용량 하한 0 클램프 등으로 인한 오차)은 모두 "이월분"으로 그래프 시작점 누적치에
+  // 얹어서, 마지막 달 누적치가 총 포인트 사용실적과 항상 딱 맞아떨어지게 만든다.
   const monthlyTrendData = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -197,21 +202,35 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       const label = m === currentMonth ? `${m}월 (현재)` : `${m}월`;
       return { key, label };
     });
+    const monthKeySet = new Set(months.map(m => m.key));
 
-    const spendByMonth: Record<string, number> = {};
+    const netByMonth: Record<string, number> = {};
+    let netWithinRange = 0;
     transactions.forEach(t => {
-      if (t.type !== 'SPEND' || t.status !== 'COMPLETED') return;
+      if (t.status !== 'COMPLETED') return;
+      let delta = 0;
+      if (t.type === 'SPEND') delta = t.amount;
+      else if (t.type === 'RECHARGE' || t.type === 'REFUND') delta = -t.amount;
+      else return;
+
       const key = t.timestamp.slice(0, 7); // "YYYY-MM"
-      spendByMonth[key] = (spendByMonth[key] || 0) + t.amount;
+      if (monthKeySet.has(key)) {
+        netByMonth[key] = (netByMonth[key] || 0) + delta;
+        netWithinRange += delta;
+      }
     });
 
-    let runningTotal = 0;
+    // 상단 "총 포인트 사용실적" KPI와 동일한 값 — 항상 정답이며, 여기서 이월분을
+    // 역산해 마지막 누적치가 이 값과 정확히 같아지도록 보정한다.
+    const totalUsed = customers.reduce((sum, c) => sum + c.usedPoints, 0);
+    let runningTotal = totalUsed - netWithinRange;
+
     return months.map(({ key, label }) => {
-      const monthlySpend = spendByMonth[key] || 0;
+      const monthlySpend = netByMonth[key] || 0;
       runningTotal += monthlySpend;
       return { month: label, monthlySpend, cumulativeSpend: runningTotal };
     });
-  }, [transactions]);
+  }, [transactions, customers]);
 
   const latestData = monthlyTrendData[monthlyTrendData.length - 1];
 

@@ -59,6 +59,56 @@ export function mapTextToCategory(text: string): { id: CategoryId; name: string 
   return { id: 'shopping', name: '온라인쇼핑 / 커머스' };
 }
 
+// Excel 업로드 파일의 날짜 칸은 실제 Date 형식이 아니라 "2026.08.18", "2026/08/18",
+// "08/18/2026", "2026년 8월 18일", "20260818"처럼 다양한 텍스트로 들어오는 경우가 많다.
+// 이런 값을 그대로 timestamp로 저장하면 "YYYY-MM" 접두사로 월을 구분하는 월별 소진 추이
+// 차트, 날짜 정렬, "최근 활동일" 비교 등이 조용히 어긋난다 — 표준 "YYYY-MM-DD[ HH:mm]"
+// 형식으로 최대한 정규화하고, 정말 인식할 수 없는 값만 호출부의 "날짜 없음" 처리로 넘긴다.
+export function normalizeExcelDateString(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+
+  // 한글 표기: 2026년 8월 18일
+  const koMatch = trimmed.match(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if (koMatch) {
+    const [, y, m, d] = koMatch;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD, 시:분이 붙어있으면 함께 보존
+  const isoLike = trimmed.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (isoLike) {
+    const [, y, m, d, hh, mm] = isoLike;
+    const datePart = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    return hh ? `${datePart} ${hh.padStart(2, '0')}:${mm}` : datePart;
+  }
+
+  // MM/DD/YYYY 등 연도가 끝에 오는 표기
+  const trailingYear = trimmed.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})/);
+  if (trailingYear) {
+    const [, a, b, y] = trailingYear;
+    return `${y}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
+  }
+
+  // 구분자 없는 YYYYMMDD
+  const compact = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (compact) {
+    const [, y, m, d] = compact;
+    return `${y}-${m}-${d}`;
+  }
+
+  // 마지막으로 JS Date 파서에 맡겨본다 (예: "Aug 18, 2026")
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return '';
+}
+
 // Helper to map transaction type
 export function mapTextToTransactionType(text: string): TransactionType {
   if (!text) return 'SPEND';
@@ -236,9 +286,17 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
             const hh = String(dateRaw.getHours()).padStart(2, '0');
             const mm = String(dateRaw.getMinutes()).padStart(2, '0');
             formattedDate = `${y}-${m}-${d} ${hh}:${mm}`;
+          } else if (typeof dateRaw === 'number' && dateRaw > 0) {
+            // 셀이 날짜 서식이 아니라 순수 숫자(Excel 날짜 일련번호)로 들어온 경우
+            const parsed = XLSX.SSF.parse_date_code(dateRaw);
+            if (parsed) {
+              formattedDate = `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+            }
           } else if (typeof dateRaw === 'string' && dateRaw.trim()) {
-            formattedDate = dateRaw.trim();
-          } else {
+            formattedDate = normalizeExcelDateString(dateRaw);
+          }
+
+          if (!formattedDate) {
             const now = new Date();
             formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
           }
