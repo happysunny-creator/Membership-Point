@@ -434,26 +434,6 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               />
             </div>
 
-            {/* 엑셀 일괄 등록 바로가기 배너 */}
-            <div className="p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-xl flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-slate-800 text-xs">엑셀 파일로 대량 일괄 등록</div>
-                  <div className="text-[11px] text-slate-500">수십~수백 명의 조직 및 예산을 엑셀로 한 번에 등록합니다.</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMode('excel')}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer shrink-0 ml-2"
-              >
-                엑셀로 일괄 등록하기
-              </button>
-            </div>
-
             {/* Footer Actions */}
             <div className="pt-4 border-t border-slate-200 flex items-center justify-end space-x-2">
               <button
