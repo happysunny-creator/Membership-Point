@@ -427,7 +427,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="예: 2026 하반기 신규 부서 복지 및 출장 포인트 패키지 배정 적용"
+                placeholder="예: 2026년 멤버십 포인트 기본 배정"
                 rows={2}
                 className="w-full px-3 py-2 bg-slate-50/70 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 resize-none"
               />
