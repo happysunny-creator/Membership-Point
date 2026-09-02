@@ -440,10 +440,9 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           )}
 
           <div className="absolute flex flex-col items-center pointer-events-none">
-            <span className="text-[11px] text-slate-400 font-medium">전체 인원</span>
-            <span className="text-xs font-extrabold text-slate-800">{totalStageMembers}명</span>
-            <span className="text-[11px] font-extrabold mt-0.5" style={{ color: avgStageColor }}>
-              평균 {formatPercent(avgBurnRate)} · {avgStageNumber}단계
+            <span className="text-[11px] text-slate-400 font-medium">평균 사용률</span>
+            <span className="text-xs font-extrabold" style={{ color: avgStageColor }}>
+              {formatPercent(avgBurnRate)} · {avgStageNumber}단계
             </span>
           </div>
         </div>
