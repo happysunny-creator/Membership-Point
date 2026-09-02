@@ -723,6 +723,24 @@ export default function App() {
         {/* ================= TAB 2: 실적관리 (Performance & Point Spending) ================= */}
         {activeTab === 'performance' && (
           <div className="space-y-6 animate-in fade-in duration-150">
+            {/* Visual Charts Overview */}
+            <ChartsSection
+              customers={customers}
+              transactions={transactions}
+              settings={settings}
+              onSelectOrg={() => {
+                document.getElementById('category-analytics-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            />
+
+            {/* Organization Analytics Grid (조직별 포인트 사용 실적) */}
+            <CategoryAnalyticsView
+              customers={customers}
+              transactions={transactions}
+              settings={settings}
+              onSelectCustomer={cust => setSelectedCustomer(cust)}
+            />
+
             {/* Top Action Bar: 실적 엑셀 업로드 및 직접 등록 */}
             <div
               className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
@@ -780,24 +798,6 @@ export default function App() {
                 </button>
               </div>
             </div>
-
-            {/* Visual Charts Overview */}
-            <ChartsSection
-              customers={customers}
-              transactions={transactions}
-              settings={settings}
-              onSelectOrg={() => {
-                document.getElementById('category-analytics-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            />
-
-            {/* Organization Analytics Grid (조직별 포인트 사용 실적) */}
-            <CategoryAnalyticsView
-              customers={customers}
-              transactions={transactions}
-              settings={settings}
-              onSelectCustomer={cust => setSelectedCustomer(cust)}
-            />
 
             {/* Real-time Transactions & Logs Table */}
             <TransactionHistoryTable
