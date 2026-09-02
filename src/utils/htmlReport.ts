@@ -16,6 +16,60 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// 커스텀 웹폰트(LG Smart)가 완전히 적용된 뒤에 html2canvas로 캡처해야 한다. document.fonts.ready
+// 만 기다리면 폰트 "다운로드"는 끝나도 브라우저가 그 폰트로 아직 한 번도 실제 페인트를 하지
+// 않은 상태일 수 있어, 다음 프레임에 처음 그려질 때 글자 간격/줄바꿈이 깨지거나(자간이
+// 좁아져 글자가 겹치는 등) 일부 문자만 대체 폰트로 그려지는 문제가 생길 수 있다. rAF를
+// 두 번 연달아 기다려 최소 한 번의 실제 페인트 사이클이 지나가게 한 뒤에 캡처한다.
+function waitForFontsAndPaint(win: (Window & typeof globalThis) | null): Promise<void> {
+  const fontsReady = win?.document?.fonts?.ready ?? Promise.resolve();
+  const raf = (w: Window) => new Promise<void>(resolve => w.requestAnimationFrame(() => resolve()));
+  return fontsReady.then(() => {
+    if (!win) return;
+    return raf(win).then(() => raf(win));
+  });
+}
+
+// 보고서(회원 실적 안내 / 조직 전체 현황) 전용 서체 — LG스마트체 4종(Light/Regular/
+// SemiBold/Bold)을 public/fonts에 함께 배포해, 인터넷이 연결되지 않은 폐쇄망 PC에서도
+// (CDN 등 외부 요청 없이) 항상 정상적으로 렌더링되도록 한다. iframe으로 렌더링하는
+// 보고서 문서는 부모 페이지의 @font-face를 상속받지 않으므로, 각 보고서의 <style>에
+// 이 블록을 그대로 삽입해서 자체적으로 웹폰트를 선언해야 한다.
+//
+// 경로는 반드시 "fonts/..."처럼 슬래시 없이 상대경로로 써야 한다 — 이 보고서는 iframe의
+// srcdoc으로 렌더링되는데, srcdoc 문서는 자체 URL이 없어 절대경로("/fonts/...")를 쓰면
+// 부모 창의 origin이 아니라 파일시스템 루트를 기준으로 풀린다. 브라우저 개발 서버에서는
+// 우연히 동작하지만, Electron 패키징 후 앱이 file:///.../dist/index.html로 로드되는
+// 폐쇄망 PC의 실제 exe에서는 상대경로여야만 file:///.../dist/fonts/...로 정확히 풀린다.
+const REPORT_FONT_FACE = `
+  @font-face {
+    font-family: 'LG Smart';
+    src: url('fonts/LGSmartFont-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'LG Smart';
+    src: url('fonts/LGSmartFont-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'LG Smart';
+    src: url('fonts/LGSmartFont-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'LG Smart';
+    src: url('fonts/LGSmartFont-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+  }
+`;
+const REPORT_FONT_STACK =
+  "'LG Smart', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif";
+
 // Builds a single self-contained HTML file (inline CSS, no external requests) so it can be
 // opened, emailed, or printed to PDF from any browser without the app or an internet connection.
 export function generateStatusReportHtml({
@@ -93,12 +147,14 @@ export function generateStatusReportHtml({
 <meta charset="UTF-8" />
 <title>${escapeHtml(reportTitle)}</title>
 <style>
-  * { box-sizing: border-box; font-family: inherit; }
+  ${REPORT_FONT_FACE}
+  * { box-sizing: border-box; font-family: inherit; line-height: inherit; }
   body {
     margin: 0;
     padding: 40px 48px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif;
+    font-family: ${REPORT_FONT_STACK};
     font-size: 13px;
+    line-height: 1.5;
     color: #1e293b;
     background: #f1f5f9;
   }
@@ -149,7 +205,8 @@ export function generateStatusReportHtml({
   .kpi .value {
     font-size: 20px;
     font-weight: 700;
-    letter-spacing: -0.01em;
+    /* 커스텀 웹폰트(LG Smart)+html2canvas 조합에서 음수 자간이 숫자 겹침을 유발할 수
+       있어 자간을 넣지 않는다(기존 -0.01em 제거). */
   }
   .kpi .sub {
     font-size: 12px;
@@ -345,18 +402,14 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
 <meta charset="UTF-8" />
 <title>${escapeHtml(reportTitle)}</title>
 <style>
-  @font-face {
-    font-family: 'Pretendard Report';
-    src: url('/fonts/PretendardVariable.woff2') format('woff2');
-    font-weight: 100 900;
-    font-style: normal;
-  }
-  * { box-sizing: border-box; font-family: inherit; }
+  ${REPORT_FONT_FACE}
+  * { box-sizing: border-box; font-family: inherit; line-height: inherit; }
   body {
     margin: 0;
     padding: 40px 48px;
-    font-family: 'Pretendard Report', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', Roboto, sans-serif;
+    font-family: ${REPORT_FONT_STACK};
     font-size: 13px;
+    line-height: 1.5;
     color: #1e293b;
     background: #f1f5f9;
   }
@@ -424,7 +477,8 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
   .kpi .value {
     font-size: 20px;
     font-weight: 700;
-    letter-spacing: -0.01em;
+    /* 커스텀 웹폰트(LG Smart)+html2canvas 조합에서 음수 자간이 숫자 겹침을 유발할 수
+       있어 자간을 넣지 않는다(기존 -0.01em 제거). */
   }
   section { margin-bottom: 32px; }
   h2 {
@@ -571,15 +625,21 @@ export async function downloadMemberUsageReportPdf(params: MemberUsageReportPara
     const sheet = doc?.querySelector('.sheet') as HTMLElement | null;
     if (!doc || !sheet) throw new Error('보고서 내용을 찾을 수 없습니다.');
 
-    // 커스텀 웹폰트(Pretendard)가 다 로드된 뒤에 캡처해야 시스템 폰트로 잘못 찍히지 않는다.
+    // 커스텀 웹폰트(LG Smart)가 다 로드되고 최소 한 번 실제로 페인트된 뒤에 캡처해야
+    // 글자 간격이 깨지거나(자간이 좁아져 겹침) 일부 문자만 대체 폰트로 그려지는 문제가 없다.
     const iframeWindow = iframe.contentWindow as (Window & typeof globalThis) | null;
     await Promise.all([
-      iframeWindow?.document?.fonts?.ready ?? Promise.resolve(),
+      waitForFontsAndPaint(iframeWindow),
       new Promise(resolve => setTimeout(resolve, 50)),
     ]);
     iframe.style.height = `${doc.body.scrollHeight}px`;
 
-    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff' });
+    // foreignObjectRendering: html2canvas의 기본 모드는 텍스트를 직접 캔버스에 그리면서
+    // 글자 폭을 자체적으로(부정확하게) 계산하는데, 커스텀 서체(LG Smart)로 한글과
+    // 영문/숫자가 섞인 텍스트(예: "미래기술R&D센터")를 그릴 때 두 구간의 경계에서
+    // 위치 계산이 어긋나 글자가 겹치거나 깨져 보인다. foreignObjectRendering을 켜면
+    // 브라우저 자체 렌더링 엔진에 텍스트 배치를 그대로 맡겨 이 문제가 사라진다.
+    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', foreignObjectRendering: true });
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -652,12 +712,21 @@ export async function downloadStatusReportPdf(params: StatusReportParams): Promi
     const sheet = doc?.querySelector('.sheet') as HTMLElement | null;
     if (!doc || !sheet) throw new Error('보고서 내용을 찾을 수 없습니다.');
 
-    // Let webfonts/layout settle, then size the iframe to the real content height so
-    // html2canvas captures the full report instead of a clipped viewport.
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // 커스텀 웹폰트(LG Smart)가 다 로드되고 최소 한 번 실제로 페인트된 뒤에 캡처해야
+    // 글자 간격이 깨지거나(자간이 좁아져 겹침) 일부 문자만 대체 폰트로 그려지는 문제가 없다.
+    const iframeWindow = iframe.contentWindow as (Window & typeof globalThis) | null;
+    await Promise.all([
+      waitForFontsAndPaint(iframeWindow),
+      new Promise(resolve => setTimeout(resolve, 50)),
+    ]);
     iframe.style.height = `${doc.body.scrollHeight}px`;
 
-    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff' });
+    // foreignObjectRendering: html2canvas의 기본 모드는 텍스트를 직접 캔버스에 그리면서
+    // 글자 폭을 자체적으로(부정확하게) 계산하는데, 커스텀 서체(LG Smart)로 한글과
+    // 영문/숫자가 섞인 텍스트(예: "미래기술R&D센터")를 그릴 때 두 구간의 경계에서
+    // 위치 계산이 어긋나 글자가 겹치거나 깨져 보인다. foreignObjectRendering을 켜면
+    // 브라우저 자체 렌더링 엔진에 텍스트 배치를 그대로 맡겨 이 문제가 사라진다.
+    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', foreignObjectRendering: true });
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
