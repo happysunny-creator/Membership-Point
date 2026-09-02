@@ -37,6 +37,9 @@ interface TransactionHistoryTableProps {
   onSelectCustomerByName?: (customerName: string) => void;
   onEditTransaction?: (updatedTxn: Transaction) => void;
   onDeleteTransaction?: (txnId: string) => void;
+  // 실적 등록/업로드 툴바(실적 엑셀 업로드·직접 등록·다운받기 버튼)를 별도 카드로 띄우지
+  // 않고, 이 표와 같은 카드 안에 위쪽 구획으로 함께 묶어서 보여주기 위한 슬롯.
+  topSection?: React.ReactNode;
 }
 
 export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = ({
@@ -45,6 +48,7 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
   onSelectCustomerByName,
   onEditTransaction,
   onDeleteTransaction,
+  topSection,
 }) => {
   const [editingTxn, setEditingTxn] = useState<Transaction | null>(null);
   const [deletingTxn, setDeletingTxn] = useState<Transaction | null>(null);
@@ -97,6 +101,8 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden" id="transaction-history-container">
+      {topSection && <div className="border-b border-slate-200">{topSection}</div>}
+
       {/* Header */}
       <div className="p-5 border-b border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-50/70">
         <div className="flex items-center space-x-3.5">

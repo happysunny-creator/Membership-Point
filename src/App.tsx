@@ -741,65 +741,8 @@ export default function App() {
               onSelectCustomer={cust => setSelectedCustomer(cust)}
             />
 
-            {/* Top Action Bar: 실적 엑셀 업로드 및 직접 등록 */}
-            <div
-              className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-              id="performance-top-action-bar"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                  <FileSpreadsheet className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <span>포인트 실적 데이터 관리</span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                      실적 등록 및 업로드
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    대량 실적 엑셀 일괄 업로드 또는 개별 실적 건을 직접 시스템에 등록할 수 있습니다.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  id="btn-perf-excel-upload"
-                  type="button"
-                  onClick={() => setIsExcelUploadOpen(true)}
-                  className="h-10 px-3.5 bg-blue-800 hover:bg-blue-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span>실적 엑셀 업로드</span>
-                </button>
-
-                <button
-                  id="btn-perf-add-transaction"
-                  type="button"
-                  onClick={() => {
-                    setTargetCustomerForModal(null);
-                    setIsAddTransactionOpen(true);
-                  }}
-                  className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shadow-blue-200"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>실적 직접 등록</span>
-                </button>
-
-                <button
-                  id="btn-perf-download-usage"
-                  type="button"
-                  onClick={handleDownloadPointUsageExcel}
-                  className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Download className="w-4 h-4 text-blue-600" />
-                  <span>포인트 사용 실적 다운받기</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Real-time Transactions & Logs Table */}
+            {/* Real-time Transactions & Logs Table — 실적 등록/업로드 툴바를 별도 카드로
+                띄우지 않고 표와 같은 카드 안에 위쪽 구획(topSection)으로 함께 묶는다. */}
             <TransactionHistoryTable
               transactions={filteredTransactions}
               customers={customers}
@@ -809,6 +752,64 @@ export default function App() {
               }}
               onEditTransaction={handleEditTransaction}
               onDeleteTransaction={handleDeleteTransaction}
+              topSection={
+                <div
+                  className="p-4 sm:p-5 bg-slate-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  id="performance-top-action-bar"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                      <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>포인트 실적 데이터 관리</span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                          실적 등록 및 업로드
+                        </span>
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        대량 실적 엑셀 일괄 업로드 또는 개별 실적 건을 직접 시스템에 등록할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      id="btn-perf-excel-upload"
+                      type="button"
+                      onClick={() => setIsExcelUploadOpen(true)}
+                      className="h-10 px-3.5 bg-blue-800 hover:bg-blue-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>실적 엑셀 업로드</span>
+                    </button>
+
+                    <button
+                      id="btn-perf-add-transaction"
+                      type="button"
+                      onClick={() => {
+                        setTargetCustomerForModal(null);
+                        setIsAddTransactionOpen(true);
+                      }}
+                      className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shadow-blue-200"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      <span>실적 직접 등록</span>
+                    </button>
+
+                    <button
+                      id="btn-perf-download-usage"
+                      type="button"
+                      onClick={handleDownloadPointUsageExcel}
+                      className="h-10 px-3.5 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <Download className="w-4 h-4 text-blue-600" />
+                      <span>포인트 사용 실적 다운받기</span>
+                    </button>
+                  </div>
+                </div>
+              }
             />
           </div>
         )}
