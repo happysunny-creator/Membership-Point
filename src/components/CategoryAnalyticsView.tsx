@@ -121,19 +121,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
     // orgs not included in it fall back to usage-amount descending.
     const sorted = sortByOrgPriority(mapped, settings?.orgPriorityOrder, (a, b) => b.usedPoints - a.usedPoints);
 
-    const totalBudgetSum = sorted.reduce((sum, o) => sum + o.totalBudget, 0);
-    const totalUsedSum = sorted.reduce((sum, o) => sum + o.usedPoints, 0);
-    const totalRemainingSum = sorted.reduce((sum, o) => sum + o.remainingPoints, 0);
-    const overallRate = totalBudgetSum > 0 ? (totalUsedSum / totalBudgetSum) * 100 : 0;
-
-    return {
-      orgs: sorted,
-      totalBudgetSum,
-      totalUsedSum,
-      totalRemainingSum,
-      overallRate,
-      totalOrgsCount: sorted.length,
-    };
+    return { orgs: sorted, totalOrgsCount: sorted.length };
   }, [customers, transactions, settings]);
 
   const filteredOrgs = orgAnalytics.orgs;
@@ -157,24 +145,8 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
             </div>
           </div>
           <p className="text-xs text-slate-500">
-            조직별 예산 배정액, 실제 누적 사용액, 인원수 및 사용률을 상세하게 분석합니다.
+            조직별 배정예산, 사용 실적, 소속 회원별 상세 내역을 분석합니다.
           </p>
-        </div>
-
-        {/* Aggregate KPI Strip */}
-        <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs w-full lg:w-auto">
-          <div className="px-2">
-            <span className="text-slate-400 block text-[11px] font-medium">전체 배정 예산</span>
-            <span className="font-extrabold text-slate-900 text-sm">{formatPoints(orgAnalytics.totalBudgetSum)}</span>
-          </div>
-          <div className="h-7 w-px bg-slate-200 hidden sm:block" />
-          <div className="px-2">
-            <span className="text-slate-400 block text-[11px] font-medium">총 누적 사용실적</span>
-            <span className="font-extrabold text-sm">
-              <span className="text-blue-600">{formatPoints(orgAnalytics.totalUsedSum)}</span>{' '}
-              <span className="text-rose-600">({formatPercent(orgAnalytics.overallRate)})</span>
-            </span>
-          </div>
         </div>
       </div>
 
