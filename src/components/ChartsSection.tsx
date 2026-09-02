@@ -201,22 +201,25 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   );
 
   // 3. Prepare Monthly / Timeline Trend Data (월별 합계 & 누적 금액)
-  // "누적 소진 금액"은 해당 월까지 실제 거래 내역을 그대로 누적한 값이어야 한다(월 합계가
-  // 0인 달인데 누적치가 이미 최종 총액에 가깝게 표시되는 건 잘못된 것). 그래서 별도
-  // 보정값을 강제로 얹지 않고, 거래 내역(SPEND는 더하고 RECHARGE/REFUND는 빼는 순사용량,
-  // COMPLETED만)만으로 월별·누적 금액을 계산한다. 올해 1월 이전(작년 등)에 실제로 발생한
-  // 거래만 그래프가 시작되는 1월 누적치에 정당하게 이월해 반영하고, 그 외에는 순수하게
-  // 월별로 쌓아 올린다.
+  // 이번 달은 아직 마감 전(진행 중)이라 다른 달과 같은 기준으로 비교할 수 없으므로,
+  // 그래프는 올해 1월부터 "전월"까지만 표시한다. "누적 소진 금액"은 해당 월까지 실제
+  // 거래 내역을 그대로 누적한 값이어야 한다(월 합계가 0인 달인데 누적치가 이미 최종
+  // 총액에 가깝게 표시되는 건 잘못된 것). 그래서 별도 보정값을 강제로 얹지 않고, 거래
+  // 내역(SPEND는 더하고 RECHARGE/REFUND는 빼는 순사용량, COMPLETED만)만으로 월별·누적
+  // 금액을 계산한다. 올해 1월 이전(작년 등)에 실제로 발생한 거래만 그래프가 시작되는
+  // 1월 누적치에 정당하게 이월해 반영하고, 그 외에는 순수하게 월별로 쌓아 올린다.
   const monthlyTrendData = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // 1-12
-    const months = Array.from({ length: currentMonth }, (_, idx) => {
+    const lastCompletedMonth = currentMonth - 1; // 이번 달은 제외, 전월까지만
+    const months = Array.from({ length: Math.max(lastCompletedMonth, 0) }, (_, idx) => {
       const m = idx + 1;
       const key = `${currentYear}-${String(m).padStart(2, '0')}`;
-      const label = m === currentMonth ? `${m}월 (현재)` : `${m}월`;
+      const label = m === lastCompletedMonth ? `${m}월 (전월)` : `${m}월`;
       return { key, label };
     });
+    if (months.length === 0) return [];
     const firstMonthKey = months[0].key;
 
     const netByMonth: Record<string, number> = {};
@@ -563,7 +566,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
         </div>
 
         <div className="pt-2 text-[11px] text-slate-500 border-t border-slate-100 flex items-center justify-between">
-          <span>당월({latestData?.month.split(' ')[0]}) 합계: <strong className="text-sky-700 font-mono font-extrabold">{formatPoints(latestData?.monthlySpend || 0)}</strong></span>
+          <span>전월({latestData?.month?.split(' ')[0] ?? '-'}) 합계: <strong className="text-sky-700 font-mono font-extrabold">{formatPoints(latestData?.monthlySpend || 0)}</strong></span>
           <span>총 누적 소진: <strong className="text-indigo-700 font-mono font-extrabold">{formatPoints(latestData?.cumulativeSpend || 0)}</strong></span>
         </div>
       </div>
