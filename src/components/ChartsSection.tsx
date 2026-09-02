@@ -108,6 +108,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       });
 
     const totalSpend = sorted.reduce((sum, item) => sum + item.used, 0);
+    const totalBudget = Object.values(orgMap).reduce((sum, item) => sum + item.budget, 0);
 
     const orgColors = [
       '#7c3aed', // violet-600
@@ -135,6 +136,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
     return {
       orgPieData: data,
       totalOrgSpent: totalSpend,
+      totalOrgBudget: totalBudget,
       uniqueOrgCount: sorted.length,
     };
   }, [customers]);
@@ -142,7 +144,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
   // 2. Prepare 사용률 단계별(1~4단계) 소속 회원 인원수 — 관리자 모드의 포인트 관리기준
   // (4단계 임계값)을 그대로 따르며, 기존 4색 체계(빨강/주황/초록/보라)를 사용한다.
   // 각 단계에 속한 회원 목록도 함께 모아둬서, 클릭 시 단계별 인원 리스트를 보여줄 수 있게 한다.
-  const { stagePieData, totalStageMembers, stageMembersMap } = useMemo(() => {
+  const { stagePieData, totalStageMembers, stageMembersMap, avgBurnRate, avgStageNumber, avgStageColor } = useMemo(() => {
     const stage1Max = settings?.stage1MaxPercent ?? 30;
     const stage2Max = settings?.stage2MaxPercent ?? 50;
     const stage3Max = settings?.stage3MaxPercent ?? 70;
@@ -175,7 +177,21 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
       membersMap[s.id] = { name: s.name, color: s.color, members: s.members };
     });
 
-    return { stagePieData: data, totalStageMembers: total, stageMembersMap: membersMap };
+    // 전체 평균 사용률(전체 소진액 / 전체 배정예산)이 관리자 모드 4단계 기준 중 몇 단계에
+    // 해당하는지 함께 계산 — 단계 도넛 가운데에 "평균 사용률이 지금 몇 단계인지" 바로 보여준다.
+    const totalUsed = customers.reduce((sum, c) => sum + c.usedPoints, 0);
+    const totalBudget = customers.reduce((sum, c) => sum + c.totalBudget, 0);
+    const avgRate = totalBudget > 0 ? (totalUsed / totalBudget) * 100 : 0;
+    const avgIdx = avgRate >= stage3Max ? 3 : avgRate >= stage2Max ? 2 : avgRate >= stage1Max ? 1 : 0;
+
+    return {
+      stagePieData: data,
+      totalStageMembers: total,
+      stageMembersMap: membersMap,
+      avgBurnRate: avgRate,
+      avgStageNumber: avgIdx + 1,
+      avgStageColor: stageDefs[avgIdx].color,
+    };
   }, [customers, settings]);
 
   // 사용률 단계별 회원 현황 표에 실제로 나열되는 순서(1→4단계) 그대로 모은 전체 회원 목록
@@ -426,6 +442,9 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
           <div className="absolute flex flex-col items-center pointer-events-none">
             <span className="text-[11px] text-slate-400 font-medium">전체 인원</span>
             <span className="text-xs font-extrabold text-slate-800">{totalStageMembers}명</span>
+            <span className="text-[11px] font-extrabold mt-0.5" style={{ color: avgStageColor }}>
+              평균 {formatPercent(avgBurnRate)} · {avgStageNumber}단계
+            </span>
           </div>
         </div>
 
