@@ -32,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-extrabold text-indigo-950 tracking-tight">
+                <h1 className="text-lg sm:text-2xl font-extrabold text-indigo-950 tracking-tight">
                   남산 리더십센터 / 스마일즈 멤버십 포인트 관리 Dashboard
                 </h1>
                 <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
@@ -40,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block mt-0.5">
-                회원등록, 포인트 배정, 조직별 실적 분석 등 멤버십 포인트의 효율적인 관리/운영을 위해 구현된 시스템 입니다.
+                회원 등록, 포인트 배정, 조직별 사용 실적 분석 등 멤버십 포인트의 효율적인 관리/운영 시스템 입니다.
               </p>
             </div>
           </div>
