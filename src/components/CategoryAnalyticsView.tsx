@@ -139,9 +139,9 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
   const filteredOrgs = orgAnalytics.orgs;
 
   return (
-    <div className="space-y-6" id="category-analytics-view">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden" id="category-analytics-view">
       {/* Overview Banner: 조직별 포인트 사용 실적 및 지출 분석 */}
-      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+      <div className="p-5 border-b border-slate-200 bg-slate-50/70 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
         <div className="space-y-1">
           <div className="flex items-center space-x-2.5">
             <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-100 shadow-2xs">
@@ -179,7 +179,7 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
       </div>
 
       {/* Organization Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
         {filteredOrgs.map(org => {
           return (
             <div
