@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Customer, SystemSettings } from '../types';
 import { downloadExcelTemplate, parseOrgNameExcelFile, downloadOrgNameExcelTemplate, downloadCustomerExcelTemplate } from '../utils/excelParser';
 import { buildManagerSummaries, buildManagerMailtoLink } from '../utils/managerMailto';
+import { buildOrgSummaries, buildOrgMailtoLink } from '../utils/orgMailto';
 import { formatPoints, formatPercent } from '../utils/formatters';
 import { AddCustomerModal } from './AddCustomerModal';
 import {
@@ -108,6 +109,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     mailableManagerSummaries.forEach(summary => {
       const link = document.createElement('a');
       link.href = buildManagerMailtoLink(summary);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  };
+
+  // 조직별 실적 안내 이메일 초안 작성용 요약 (보고서 관리 탭) — 회원 개별 담당자가 아니라
+  // "조직 표시 우선순위"에서 등록한 조직별 담당자(들)에게 조직 전체 실적을 안내한다.
+  const orgSummaries = useMemo(() => buildOrgSummaries(customers, settings.orgManagers), [customers, settings.orgManagers]);
+  const mailableOrgSummaries = useMemo(
+    () => orgSummaries.filter(s => s.managers.length > 0),
+    [orgSummaries]
+  );
+
+  // 이메일이 등록된 모든 조직 담당자에게 실적 안내 초안을 한 번에 연다 (실제 발송은 각
+  // 메일 클라이언트 창에서 사용자가 직접 눌러야 함). 같은 클릭(사용자 제스처) 안에서
+  // 동기적으로 여러 mailto 링크를 열어야 팝업 차단을 피할 수 있어 링크 클릭을 직접
+  // 시뮬레이션한다.
+  const handleBulkOrgMailto = () => {
+    mailableOrgSummaries.forEach(summary => {
+      const link = document.createElement('a');
+      link.href = buildOrgMailtoLink(summary);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -809,7 +832,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="flex items-center space-x-2.5">
                 <ListOrdered className="w-5 h-5 text-indigo-600" />
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">조직 표시 우선순위</h3>
+                  <h3 className="text-sm font-bold text-slate-900">조직 표시 우선 순위 및 조직별 담당자 관리</h3>
                   <p className="text-xs text-slate-500">
                     예산관리·실적관리 화면에서 조직이 나열되는 순서와 조직별 포인트 관리 담당자를 지정합니다. 목록에 없는 신규 조직은 뒤에 자동 추가됩니다.
                   </p>
@@ -1376,6 +1399,84 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <span
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg font-semibold cursor-not-allowed"
                             title="이 담당자의 이메일이 회원 정보에 등록되어 있지 않습니다."
+                          >
+                            이메일 미등록
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="pt-5 border-t border-slate-100 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5">
+                <Mail className="w-4 h-4 text-indigo-600" />
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900">조직별 실적 안내</h4>
+                  <p className="text-[11px] text-slate-500">
+                    조직별로 지정한 포인트 관리 담당자(들)에게 조직 전체 포인트 사용 실적을 정리한 이메일 초안을 작성합니다. 초안만 열리며, 발송은 직접 눌러야 합니다.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleBulkOrgMailto}
+                disabled={mailableOrgSummaries.length === 0}
+                title={
+                  mailableOrgSummaries.length === 0
+                    ? '이메일이 등록된 조직 담당자가 없습니다. 조직 목록 관리에서 먼저 등록해주세요.'
+                    : `이메일이 등록된 조직 ${mailableOrgSummaries.length}곳에 초안을 엽니다.`
+                }
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>조직 담당자에게 일괄 발송 하기</span>
+              </button>
+            </div>
+
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <th className="py-2 px-3 font-semibold">조직명</th>
+                    <th className="py-2 px-3 font-semibold">담당자</th>
+                    <th className="py-2 px-3 font-semibold">소속 인원</th>
+                    <th className="py-2 px-3 font-semibold text-right">총 배정</th>
+                    <th className="py-2 px-3 font-semibold text-right">총 사용</th>
+                    <th className="py-2 px-3 font-semibold text-right">사용률</th>
+                    <th className="py-2 px-3 font-semibold text-center">안내</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {orgSummaries.map(summary => (
+                    <tr key={summary.company} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 px-3 font-bold text-slate-800">{summary.company}</td>
+                      <td className="py-2.5 px-3 text-slate-600">
+                        {summary.managers.length > 0
+                          ? summary.managers.map(m => m.name || m.email).join(', ')
+                          : '-'}
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600">{summary.members.length}명</td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-slate-700">{formatPoints(summary.totalBudget)}</td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-blue-700">{formatPoints(summary.totalUsed)}</td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-slate-700">{formatPercent(summary.burnRate)}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        {summary.managers.length > 0 ? (
+                          <a
+                            href={buildOrgMailtoLink(summary)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg font-bold transition-colors"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>이메일 안내 작성</span>
+                          </a>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg font-semibold cursor-not-allowed"
+                            title="이 조직의 담당자 이메일이 등록되어 있지 않습니다. 조직 목록 관리에서 등록해주세요."
                           >
                             이메일 미등록
                           </span>

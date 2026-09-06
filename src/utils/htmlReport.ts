@@ -161,6 +161,13 @@ export function generateStatusReportHtml({
     line-height: 1.5;
     color: #1e293b;
     background: #f1f5f9;
+    /* letter-spacing이 정확히 0(기본값)이면 html2canvas가 문자열 전체를 한 번에
+       fillText로 그리는 빠른 경로를 타는데, 이 경로에서 커스텀 웹폰트(LG Smart)의
+       공백 폭을 잘못 측정해 단어 사이 공백이 사라지거나 글자가 찌그러져 보이는
+       문제가 있다. 아주 작은 양수 자간을 줘서 글자 하나하나를 개별 위치에 그리는
+       경로로 전환시키면 이 문제가 해결된다(육안으로는 자간 차이가 보이지 않고,
+       하위 요소들도 상속받는다). */
+    letter-spacing: 0.02em;
   }
   .sheet {
     max-width: 960px;
@@ -182,6 +189,12 @@ export function generateStatusReportHtml({
     font-size: 20px;
     font-weight: 700;
     margin: 0 0 4px;
+    /* letter-spacing이 정확히 0(기본값)이면 html2canvas가 문자열 전체를 한 번에
+       fillText로 그리는 빠른 경로를 타는데, 이 경로에서 커스텀 웹폰트(LG Smart)의
+       공백 폭을 잘못 측정해 단어 사이 공백이 사라지거나 글자가 찌그러져 보이는
+       문제가 있다. 아주 작은 양수 자간을 줘서 글자 하나하나를 개별 위치에 그리는
+       경로로 전환시키면 이 문제가 해결된다(육안으로는 자간 차이가 보이지 않는다). */
+    letter-spacing: 0.02em;
   }
   .header p {
     margin: 0;
@@ -416,6 +429,9 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     line-height: 1.5;
     color: #1e293b;
     background: #f1f5f9;
+    /* html2canvas + 커스텀 웹폰트 조합에서 공백이 사라지거나 글자가 찌그러지는
+       문제 회피용 — 자세한 설명은 다른 보고서 함수의 동일 주석 참고. */
+    letter-spacing: 0.02em;
   }
   .sheet {
     max-width: 820px;
@@ -438,6 +454,12 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
     font-weight: 700;
     margin: 0 0 4px;
     text-align: left;
+    /* letter-spacing이 정확히 0(기본값)이면 html2canvas가 문자열 전체를 한 번에
+       fillText로 그리는 빠른 경로를 타는데, 이 경로에서 커스텀 웹폰트(LG Smart)의
+       공백 폭을 잘못 측정해 단어 사이 공백이 사라지거나 글자가 찌그러져 보이는
+       문제가 있다. 아주 작은 양수 자간을 줘서 글자 하나하나를 개별 위치에 그리는
+       경로로 전환시키면 이 문제가 해결된다(육안으로는 자간 차이가 보이지 않는다). */
+    letter-spacing: 0.02em;
   }
   .header p {
     margin: 0;
@@ -774,6 +796,333 @@ export async function downloadStatusReportPdf(params: StatusReportParams): Promi
 
     const dateStr = new Date().toISOString().slice(0, 10);
     pdf.save(`포인트_운영_현황_보고서_${dateStr}.pdf`);
+  } finally {
+    document.body.removeChild(iframe);
+  }
+}
+
+interface OrgUsageReportParams {
+  orgName: string;
+  customers: Customer[]; // 이 조직 소속 회원만 (호출하는 쪽에서 필터링해서 전달)
+  managers?: { name: string; email: string }[];
+}
+
+// 조직 1곳용 실적 안내 보고서 — "조직별 포인트 사용 실적 및 지출 분석"의 조직 카드에서
+// 사용된다. 조직 전체 배정/실적/잔액/사용률과 소속 회원별 상세 현황을 담는다.
+export function generateOrgUsageReportHtml({ orgName, customers, managers }: OrgUsageReportParams): string {
+  const now = new Date();
+  const generatedAt = now.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const todayStr = now.toISOString().slice(0, 10);
+  const reportTitle = `${orgName} 포인트 사용 실적 보고서 (${todayStr})`;
+
+  const totalBudget = customers.reduce((sum, c) => sum + c.totalBudget, 0);
+  const totalUsed = customers.reduce((sum, c) => sum + c.usedPoints, 0);
+  const totalRemaining = customers.reduce((sum, c) => sum + c.remainingPoints, 0);
+  const burnRate = calculateBurnRate(totalUsed, totalBudget);
+
+  const managerNames = (managers || []).filter(m => m.name.trim()).map(m => m.name.trim());
+
+  const sortedMembers = [...customers].sort((a, b) => b.usedPoints - a.usedPoints);
+  const memberRows = sortedMembers
+    .map(c => {
+      const { name: cleanName, position: cleanPosition } = separateNameAndPosition(c.name, c.position);
+      const rate = calculateBurnRate(c.usedPoints, c.totalBudget);
+      return `
+        <tr>
+          <td>${escapeHtml(c.department || '-')}</td>
+          <td>${escapeHtml(cleanName || c.name)}</td>
+          <td>${escapeHtml(cleanPosition || c.position || '-')}</td>
+          <td class="num">${escapeHtml(formatPoints(c.totalBudget))}</td>
+          <td class="num">${escapeHtml(formatPoints(c.usedPoints))}</td>
+          <td class="num">${escapeHtml(formatPoints(c.remainingPoints))}</td>
+          <td class="num">${escapeHtml(formatPercent(rate))}</td>
+        </tr>`;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(reportTitle)}</title>
+<style>
+  ${REPORT_FONT_FACE}
+  * { box-sizing: border-box; font-family: inherit; line-height: inherit; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: ${REPORT_FONT_STACK};
+    font-size: 13px;
+    line-height: 1.5;
+    color: #1e293b;
+    background: #f1f5f9;
+    /* letter-spacing이 정확히 0(기본값)이면 html2canvas가 문자열 전체를 한 번에
+       fillText로 그리는 빠른 경로를 타는데, 이 경로에서 커스텀 웹폰트(LG Smart)의
+       공백 폭을 잘못 측정해 단어 사이 공백이 사라지거나 글자가 찌그러져 보이는
+       문제가 있다. 아주 작은 양수 자간을 줘서 글자 하나하나를 개별 위치에 그리는
+       경로로 전환시키면 이 문제가 해결된다(육안으로는 자간 차이가 보이지 않고,
+       하위 요소들도 상속받는다). */
+    letter-spacing: 0.02em;
+  }
+  .sheet {
+    max-width: 960px;
+    margin: 40px auto;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px 44px 48px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 2px solid #1e293b;
+    padding-bottom: 18px;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    text-align: left;
+    /* letter-spacing이 정확히 0(기본값)이면 html2canvas가 문자열 전체를 한 번에
+       fillText로 그리는 빠른 경로를 타는데, 이 경로에서 커스텀 웹폰트(LG Smart)의
+       공백 폭을 잘못 측정해 단어 사이 공백이 사라지거나 글자가 찌그러져 보이는
+       문제가 있다. 아주 작은 양수 자간을 줘서 글자 하나하나를 개별 위치에 그리는
+       경로로 전환시키면 이 문제가 해결된다(육안으로는 자간 차이가 보이지 않는다). */
+    letter-spacing: 0.02em;
+  }
+  .header p {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: #64748b;
+  }
+  .header p.greeting {
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    margin: 4px 0 6px;
+  }
+  .profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 24px;
+    font-size: 13px;
+    color: #475569;
+  }
+  .profile strong { color: #0f172a; font-size: 14px; }
+  .profile .sep { color: #cbd5e1; }
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .kpi {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .kpi .label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .kpi .value {
+    font-size: 20px;
+    font-weight: 700;
+    /* 커스텀 웹폰트(LG Smart)+html2canvas 조합에서 음수 자간이 숫자 겹침을 유발할 수
+       있어 자간을 넣지 않는다. */
+  }
+  section { margin-bottom: 32px; }
+  h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-weight: 400;
+  }
+  th, td {
+    padding: 8px 10px;
+    text-align: center;
+    border-bottom: 1px solid #f1f5f9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  td.num, th.num { text-align: center; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #f8fafc; }
+  .footer {
+    margin-top: 36px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 12px;
+    font-weight: 400;
+    color: #94a3b8;
+    display: flex;
+    justify-content: space-between;
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .sheet { box-shadow: none; border-radius: 0; max-width: none; padding: 0; margin: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="header">
+      <div>
+        <h1>${escapeHtml(reportTitle)}</h1>
+        <p class="greeting">남산 리더십센터 / 스마일즈 멤버십 포인트 사용 현황을 안내드립니다.</p>
+        <p>보고서 생성일시: ${escapeHtml(generatedAt)}</p>
+      </div>
+    </div>
+
+    <div class="profile">
+      <strong>${escapeHtml(orgName)}</strong>
+      <span class="sep">|</span>
+      <span>소속 인원 ${customers.length}명</span>
+      ${managerNames.length > 0 ? `<span class="sep">|</span><span>담당자 ${escapeHtml(managerNames.join(', '))}</span>` : ''}
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="label">포인트 배정</div>
+        <div class="value">${escapeHtml(formatPoints(totalBudget))}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">사용 실적</div>
+        <div class="value" style="color:#2563eb;">${escapeHtml(formatPoints(totalUsed))}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">잔액</div>
+        <div class="value" style="color:#059669;">${escapeHtml(formatPoints(totalRemaining))}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">사용률</div>
+        <div class="value" style="color:#e11d48;">${escapeHtml(formatPercent(burnRate))}</div>
+      </div>
+    </div>
+
+    <section>
+      <h2>소속 회원별 포인트 사용 현황 (${customers.length}명)</h2>
+      <table>
+        <colgroup>
+          <col style="width:16%" />
+          <col style="width:14%" />
+          <col style="width:14%" />
+          <col style="width:14%" />
+          <col style="width:14%" />
+          <col style="width:14%" />
+          <col style="width:14%" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>소속</th>
+            <th>성함</th>
+            <th>직책</th>
+            <th>배정포인트</th>
+            <th>사용실적</th>
+            <th>잔여포인트</th>
+            <th>사용률</th>
+          </tr>
+        </thead>
+        <tbody>${memberRows || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">소속 회원이 없습니다.</td></tr>'}</tbody>
+      </table>
+    </section>
+
+    <div class="footer">
+      <span>남산 리더십센터 / 스마일즈 멤버십 포인트 관리 Dashboard</span>
+      <span>본 문서는 ${escapeHtml(generatedAt)} 기준 시스템 데이터를 바탕으로 자동 생성되었습니다.</span>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export async function downloadOrgUsageReportPdf(params: OrgUsageReportParams): Promise<void> {
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import('jspdf'),
+    import('html2canvas'),
+  ]);
+
+  const html = generateOrgUsageReportHtml(params);
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-99999px';
+  iframe.style.top = '0';
+  iframe.style.width = '960px';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      iframe.onload = () => resolve();
+      iframe.onerror = () => reject(new Error('보고서 렌더링에 실패했습니다.'));
+      iframe.srcdoc = html;
+    });
+
+    const doc = iframe.contentDocument;
+    const sheet = doc?.querySelector('.sheet') as HTMLElement | null;
+    if (!doc || !sheet) throw new Error('보고서 내용을 찾을 수 없습니다.');
+
+    const iframeWindow = iframe.contentWindow as (Window & typeof globalThis) | null;
+    await Promise.all([
+      waitForFontsAndPaint(iframeWindow),
+      new Promise(resolve => setTimeout(resolve, 50)),
+    ]);
+    iframe.style.height = `${doc.body.scrollHeight}px`;
+
+    const canvas = await html2canvas(sheet, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      onclone: (clonedDoc: Document) => clonedDoc.fonts.ready,
+    });
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgData = canvas.toDataURL('image/png');
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    pdf.save(`${params.orgName}_포인트_사용_실적_보고서_${dateStr}.pdf`);
   } finally {
     document.body.removeChild(iframe);
   }

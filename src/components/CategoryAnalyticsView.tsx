@@ -7,8 +7,10 @@ import {
   Users,
   TrendingUp,
   ChevronRight,
+  FileDown,
 } from 'lucide-react';
 import { OrgCustomerListModal } from './OrgCustomerListModal';
+import { downloadOrgUsageReportPdf } from '../utils/htmlReport';
 
 interface CategoryAnalyticsViewProps {
   customers: Customer[];
@@ -24,6 +26,50 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
   onSelectCustomer,
 }) => {
   const [selectedOrgForModal, setSelectedOrgForModal] = useState<string | null>(null);
+
+  // "실적 보고서" 버튼 — 조직 1곳용 실적 안내 PDF(조직 전체 배정/실적/잔액/사용률 +
+  // 소속 회원별 상세 현황)를 대화상자 없이 바로 저장한다.
+  const [downloadingOrg, setDownloadingOrg] = useState<string | null>(null);
+  const handleDownloadOrgReport = async (company: string, members: Customer[]) => {
+    if (downloadingOrg) return;
+    setDownloadingOrg(company);
+    try {
+      await downloadOrgUsageReportPdf({
+        orgName: company,
+        customers: members,
+        managers: settings?.orgManagers?.[company],
+      });
+    } catch {
+      window.alert('조직 실적 보고서 PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setDownloadingOrg(null);
+    }
+  };
+
+  // "전체 조직 실적 일괄 저장" — 표시된 전체 조직의 실적 보고서 PDF를 순서대로 한 번에
+  // 저장한다 (동시에 여러 개를 처리하면 렌더링용 iframe이 겹쳐 느려지거나 실패할 수
+  // 있어 한 조직씩 순차 처리한다).
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const handleDownloadAllOrgReports = async (orgs: { company: string; members: Customer[] }[]) => {
+    if (isBulkDownloading || orgs.length === 0) return;
+    setIsBulkDownloading(true);
+    let failCount = 0;
+    for (const org of orgs) {
+      try {
+        await downloadOrgUsageReportPdf({
+          orgName: org.company,
+          customers: org.members,
+          managers: settings?.orgManagers?.[org.company],
+        });
+      } catch {
+        failCount += 1;
+      }
+    }
+    setIsBulkDownloading(false);
+    if (failCount > 0) {
+      window.alert(`${orgs.length}개 조직 중 ${failCount}개 조직의 실적 보고서 PDF 생성에 실패했습니다.`);
+    }
+  };
 
   // 1. Group Customers & Transactions by Organization (Company)
   const orgAnalytics = useMemo(() => {
@@ -148,6 +194,16 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
             조직별 배정예산, 사용 실적, 소속 회원별 상세 내역을 분석합니다.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => handleDownloadAllOrgReports(filteredOrgs.map(org => ({ company: org.company, members: org.members })))}
+          disabled={isBulkDownloading || filteredOrgs.length === 0}
+          className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+        >
+          <FileDown className="w-3.5 h-3.5 text-indigo-600" />
+          <span>{isBulkDownloading ? `저장 중... (${filteredOrgs.length}개 조직)` : '전체 조직 실적 보고서 일괄 저장'}</span>
+        </button>
       </div>
 
       {/* Organization Cards Grid */}
@@ -248,7 +304,15 @@ export const CategoryAnalyticsView: React.FC<CategoryAnalyticsViewProps> = ({
               </div>
 
               {/* Card Footer Action */}
-              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-end">
+              <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => handleDownloadOrgReport(org.company, org.members)}
+                  disabled={downloadingOrg === org.company}
+                  className="text-xs font-semibold text-indigo-700 hover:text-indigo-800 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  <span>{downloadingOrg === org.company ? '저장 중...' : '실적 보고서'}</span>
+                </button>
                 <button
                   onClick={() => setSelectedOrgForModal(org.company)}
                   className="text-xs font-semibold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition-colors cursor-pointer"
