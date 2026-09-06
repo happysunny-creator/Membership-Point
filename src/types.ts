@@ -99,8 +99,9 @@ export interface SystemSettings {
   enableAutoCustomerCreation: boolean;
   orgPriorityOrder?: string[]; // Custom display order for organizations (company names, in order)
   // 조직(회사)별 포인트 관리 담당자 — 개별 회원의 담당자와 별개로, 조직 단위 실적을
-  // 안내할 때 받을 사람을 지정하기 위한 것. 조직명(company)을 키로 사용한다.
-  orgManagers?: Record<string, { name: string; email: string }>;
+  // 안내할 때 받을 사람을 지정하기 위한 것. 조직명(company)을 키로 사용한다. 한 조직에
+  // 담당자가 여러 명일 수 있어 배열로 저장한다.
+  orgManagers?: Record<string, { name: string; email: string }[]>;
 }
 
 export interface FilterState {

@@ -133,14 +133,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // 조직별 포인트 관리 담당자(이름/이메일) 초안 — "우선순위 저장"을 누를 때 조직 순서와
   // 함께 저장된다. 개별 회원의 담당자 필드와는 별개로, 조직 단위 실적을 보낼 대상을
-  // 지정하기 위한 것이다.
-  const [orgManagerDrafts, setOrgManagerDrafts] = useState<Record<string, { name: string; email: string }>>(
-    () => settings.orgManagers ?? {}
+  // 지정하기 위한 것이다. 한 조직에 담당자가 여러 명일 수 있어 배열로 관리한다.
+  const [orgManagerDrafts, setOrgManagerDrafts] = useState<Record<string, { name: string; email: string }[]>>(
+    () => {
+      // 과거 버전(담당자 1명, 배열이 아닌 단일 객체)으로 저장된 값이 남아있을 수 있어
+      // 배열 형태로 정규화해서 읽는다.
+      const raw = settings.orgManagers ?? {};
+      const normalized: Record<string, { name: string; email: string }[]> = {};
+      Object.entries(raw).forEach(([company, value]) => {
+        normalized[company] = Array.isArray(value) ? value : [value as { name: string; email: string }];
+      });
+      return normalized;
+    }
   );
-  const updateOrgManager = (company: string, field: 'name' | 'email', value: string) => {
+  const updateOrgManager = (company: string, index: number, field: 'name' | 'email', value: string) => {
+    setOrgManagerDrafts(prev => {
+      const list = prev[company] ?? [];
+      const nextList = list.map((m, i) => (i === index ? { ...m, [field]: value } : m));
+      return { ...prev, [company]: nextList };
+    });
+  };
+  const addOrgManager = (company: string) => {
     setOrgManagerDrafts(prev => ({
       ...prev,
-      [company]: { name: prev[company]?.name ?? '', email: prev[company]?.email ?? '', [field]: value },
+      [company]: [...(prev[company] ?? []), { name: '', email: '' }],
+    }));
+  };
+  const removeOrgManager = (company: string, index: number) => {
+    setOrgManagerDrafts(prev => ({
+      ...prev,
+      [company]: (prev[company] ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -876,7 +898,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {orgOrderDraft.map((company, index) => {
                   const isEditing = editingOrgIndex === index;
-                  const manager = orgManagerDrafts[company];
+                  const managers = orgManagerDrafts[company] ?? [];
                   return (
                   <div
                     key={company}
@@ -971,23 +993,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* 조직별 포인트 관리 담당자 — 조직 단위 실적 안내를 보낼 대상 */}
-                  <div className="flex items-center gap-1.5 pl-8">
-                    <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <input
-                      type="text"
-                      value={manager?.name ?? ''}
-                      onChange={e => updateOrgManager(company, 'name', e.target.value)}
-                      placeholder="담당자명"
-                      className="w-20 min-w-0 px-2 py-1 text-[11px] text-slate-800 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                    <input
-                      type="email"
-                      value={manager?.email ?? ''}
-                      onChange={e => updateOrgManager(company, 'email', e.target.value)}
-                      placeholder="담당자 이메일"
-                      className="flex-1 min-w-0 px-2 py-1 text-[11px] text-slate-800 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
+                  {/* 조직별 포인트 관리 담당자 — 조직 단위 실적 안내를 보낼 대상. 한 조직에
+                      담당자가 여러 명일 수 있어 목록 형태로 관리한다. */}
+                  <div className="flex flex-col gap-1.5 pl-8">
+                    {managers.map((m, mIndex) => (
+                      <div key={mIndex} className="flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={m.name}
+                          onChange={e => updateOrgManager(company, mIndex, 'name', e.target.value)}
+                          placeholder="담당자명"
+                          className="w-20 min-w-0 px-2 py-1 text-[11px] text-slate-800 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                        <input
+                          type="email"
+                          value={m.email}
+                          onChange={e => updateOrgManager(company, mIndex, 'email', e.target.value)}
+                          placeholder="담당자 이메일"
+                          className="flex-1 min-w-0 px-2 py-1 text-[11px] text-slate-800 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeOrgManager(company, mIndex)}
+                          className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                          title="담당자 삭제"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => addOrgManager(company)}
+                      className="flex items-center gap-1 self-start px-1.5 py-0.5 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition-colors cursor-pointer"
+                    >
+                      <PlusCircle className="w-3 h-3" />
+                      <span>담당자 추가</span>
+                    </button>
                   </div>
                   </div>
                   );
