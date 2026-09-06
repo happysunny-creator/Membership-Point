@@ -333,6 +333,17 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
           const categoryMeta = mapTextToCategory(categoryRaw || merchant || description);
           const txnType = mapTextToTransactionType(typeRaw);
 
+          // RECHARGE/REFUND/BUDGET_ALLOCATION 금액은 항상 양수로 저장해야 한다 — 이
+          // 유형들은 "환불/충전/배정된 금액이 얼마인지"를 나타내고, 사용실적 집계 쪽
+          // (recalculateCustomerBalances 등)에서 이미 "사용액 - 이 금액"으로 방향을
+          // 직접 빼고 있기 때문이다. 여기서 SPEND가 아닌 행의 부호까지 그대로 살려두면
+          // (예: 구분="환불", 사용금액=-30000처럼 부호가 이미 방향을 나타내는 표를 그대로
+          // 가져온 경우) 방향이 이중으로 반영되어 오히려 사용실적이 늘어나 버린다.
+          // SPEND는 "-1,000"처럼 음수 사용을 그대로 표기해야 하므로 부호를 보존한다.
+          if (txnType !== 'SPEND') {
+            numericAmount = Math.abs(numericAmount);
+          }
+
           // Cleanly separate name and position if combined (e.g. "김민수 이사", "김민수(이사)")
           const { name: separatedCustomerName, position: separatedPosition } = separateNameAndPosition(
             customerName,
