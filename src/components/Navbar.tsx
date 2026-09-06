@@ -40,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block mt-0.5">
-                회원 등록, 포인트 배정, 조직별 사용 실적 분석 등 멤버십 포인트의 효율적인 관리/운영 시스템 입니다.
+                회원 등록, 포인트 배정, 조직별 사용 실적 분석 등 멤버십 포인트의 효율적인 운영을 위한 통합 관리 시스템 입니다.
               </p>
             </div>
           </div>
