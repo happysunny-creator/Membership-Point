@@ -343,13 +343,16 @@ export const OrgCustomerListModal: React.FC<OrgCustomerListModalProps> = ({
                               {getTransactionContentLabel(txn)}
                             </td>
                             <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                              {/* 잔액에 미치는 실제 부호로 표기한다. amount 자체에 이미
+                                  부호가 있을 수 있어(예: 사용 유형의 음수 사용/정정) 앞에
+                                  "+"/"-"를 따로 붙이면 이중 부호("--1,000")가 될 수 있으므로,
+                                  실제 증감액을 계산해 formatPoints 하나로만 부호를 표기한다. */}
                               <span
                                 className={`font-extrabold ${
                                   isSpend ? 'text-rose-600' : 'text-emerald-600'
                                 }`}
                               >
-                                {isSpend ? '-' : '+'}
-                                {formatPoints(txn.amount)}
+                                {formatPoints(isSpend ? txn.amount : -txn.amount)}
                               </span>
                             </td>
                             <td className="py-2.5 px-3 text-center whitespace-nowrap">

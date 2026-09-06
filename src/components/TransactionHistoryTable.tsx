@@ -226,9 +226,14 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                       <span className="font-medium text-slate-800 truncate max-w-[220px] block" title={merchant}>{merchant}</span>
                     </td>
 
-                    {/* 7. 사용금액 */}
+                    {/* 7. 사용금액 — 환불/충전(REFUND·RECHARGE)은 사용실적에서 "빼는"
+                        금액이므로 항상 "-"를 붙여 표기한다. amount 자체는 이 유형에서
+                        항상 양수 크기로 저장되어 있다(방향은 type으로만 표현). 사용
+                        (SPEND)은 음수 사용/정정을 그대로 표기해야 하므로 원래 부호를
+                        그대로 쓴다. */}
                     <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
                       <div className="font-extrabold text-sm text-blue-600 font-mono">
+                        {txn.type === 'REFUND' || txn.type === 'RECHARGE' ? '-' : ''}
                         {formatPoints(txn.amount)}
                       </div>
                     </td>
