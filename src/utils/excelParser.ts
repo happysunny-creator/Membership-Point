@@ -293,13 +293,17 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
             normalizedRow['order_number'] ||
             `IMP-${Date.now().toString().slice(-6)}-${idx + 1}`;
 
-          // Clean amount
+          // Clean amount — 부호(-)는 그대로 보존한다. 실적 엑셀에는 환불/취소 등을
+          // 음수 사용금액으로 기록하는 경우가 있는데, 예전에는 여기서 Math.abs()로
+          // 부호를 강제로 지워버려 "-"가 표기되지 않고 항상 양수로만 보이는 문제가
+          // 있었다. formatPoints()는 Intl.NumberFormat을 사용해 음수도 "-1,000 P"
+          // 처럼 올바르게 표기하므로, 파싱 단계에서는 부호를 지우지 않아야 한다.
           let numericAmount = 0;
           if (typeof amountRaw === 'number') {
-            numericAmount = Math.abs(amountRaw);
+            numericAmount = amountRaw;
           } else if (typeof amountRaw === 'string') {
             const cleanStr = amountRaw.replace(/[^0-9.-]/g, '');
-            numericAmount = Math.abs(parseFloat(cleanStr)) || 0;
+            numericAmount = parseFloat(cleanStr) || 0;
           }
 
           // Format timestamp
@@ -347,9 +351,10 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
           if (!separatedCustomerName || separatedCustomerName.trim() === '') {
             isValid = false;
             validationMessage = '성함(회원명)이 누락되었습니다.';
-          } else if (numericAmount <= 0) {
+          } else if (numericAmount === 0) {
+            // 음수(환불/취소 등)는 유효한 값으로 허용하고, 0만 오류로 처리한다.
             isValid = false;
-            validationMessage = '사용금액이 0보다 커야 합니다.';
+            validationMessage = '사용금액이 0입니다.';
           }
 
           if (isValid) {
