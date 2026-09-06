@@ -28,6 +28,7 @@ import {
   FileDown,
   Mail,
   Send,
+  UserCheck,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -130,6 +131,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isOrgOrderSaved, setIsOrgOrderSaved] = useState(false);
   const [newOrgName, setNewOrgName] = useState('');
 
+  // 조직별 포인트 관리 담당자(이름/이메일) 초안 — "우선순위 저장"을 누를 때 조직 순서와
+  // 함께 저장된다. 개별 회원의 담당자 필드와는 별개로, 조직 단위 실적을 보낼 대상을
+  // 지정하기 위한 것이다.
+  const [orgManagerDrafts, setOrgManagerDrafts] = useState<Record<string, { name: string; email: string }>>(
+    () => settings.orgManagers ?? {}
+  );
+  const updateOrgManager = (company: string, field: 'name' | 'email', value: string) => {
+    setOrgManagerDrafts(prev => ({
+      ...prev,
+      [company]: { name: prev[company]?.name ?? '', email: prev[company]?.email ?? '', [field]: value },
+    }));
+  };
+
   // Append any organization that shows up in customer records but isn't in the list yet.
   // Never auto-remove — manually-added organizations (with no members yet) and any
   // organization the user has explicitly taken out should stay exactly as the user left them.
@@ -164,6 +178,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleRemoveOrgFromOrder = (name: string) => {
     setOrgOrderDraft(prev => prev.filter(n => n !== name));
+    setOrgManagerDrafts(prev => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
 
   // Bulk-register organization names from an uploaded Excel/CSV file (single "조직명" column)
@@ -254,11 +274,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
 
     setOrgOrderDraft(prev => prev.map((name, i) => (i === editingOrgIndex ? trimmed : name)));
+    setOrgManagerDrafts(prev => {
+      if (!(oldName in prev)) return prev;
+      const next = { ...prev };
+      next[trimmed] = next[oldName];
+      delete next[oldName];
+      return next;
+    });
     handleCancelEditOrg();
   };
 
   const handleSaveOrgOrder = () => {
-    onUpdateSettings({ ...settings, orgPriorityOrder: orgOrderDraft });
+    onUpdateSettings({ ...settings, orgPriorityOrder: orgOrderDraft, orgManagers: orgManagerDrafts });
     setIsOrgOrderSaved(true);
     setTimeout(() => setIsOrgOrderSaved(false), 3000);
   };
@@ -762,7 +789,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">조직 표시 우선순위</h3>
                   <p className="text-xs text-slate-500">
-                    예산관리·실적관리 화면에서 조직이 나열되는 순서를 직접 지정합니다. 목록에 없는 신규 조직은 뒤에 자동 추가됩니다.
+                    예산관리·실적관리 화면에서 조직이 나열되는 순서와 조직별 포인트 관리 담당자를 지정합니다. 목록에 없는 신규 조직은 뒤에 자동 추가됩니다.
                   </p>
                 </div>
               </div>
@@ -849,11 +876,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {orgOrderDraft.map((company, index) => {
                   const isEditing = editingOrgIndex === index;
+                  const manager = orgManagerDrafts[company];
                   return (
                   <div
                     key={company}
-                    className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="flex flex-col gap-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   >
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 text-[11px] font-extrabold flex items-center justify-center shrink-0">
                         {index + 1}
@@ -940,6 +969,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </>
                       )}
                     </div>
+                  </div>
+
+                  {/* 조직별 포인트 관리 담당자 — 조직 단위 실적 안내를 보낼 대상 */}
+                  <div className="flex items-center gap-1.5 pl-8">
+                    <UserCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={manager?.name ?? ''}
+                      onChange={e => updateOrgManager(company, 'name', e.target.value)}
+                      placeholder="담당자명"
+                      className="w-20 min-w-0 px-2 py-1 text-[11px] text-slate-800 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                    <input
+                      type="email"
+                      value={manager?.email ?? ''}
+                      onChange={e => updateOrgManager(company, 'email', e.target.value)}
+                      placeholder="담당자 이메일"
+                      className="flex-1 min-w-0 px-2 py-1 text-[11px] text-slate-800 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
                   </div>
                   );
                 })}
