@@ -37,7 +37,7 @@ interface SettingsViewProps {
   onUpdateSettings: (newSettings: SystemSettings) => void;
   customers: Customer[];
   onAddCustomer: (newCustomer: Customer) => void;
-  onBatchAddCustomers: (newCustomers: Customer[]) => void;
+  onBatchAddCustomers: (newCustomers: Customer[], importMode?: 'APPEND' | 'REPLACE') => void;
   onUpdateCustomer: (updatedCustomer: Customer) => void;
   onOpenExcelUpload: () => void;
   onResetData: () => void;

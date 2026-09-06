@@ -30,7 +30,7 @@ import {
 interface MemberManagementProps {
   customers: Customer[];
   onAddCustomer: (newCustomer: Customer) => void;
-  onBatchAddCustomers: (newCustomers: Customer[]) => void;
+  onBatchAddCustomers: (newCustomers: Customer[], importMode?: 'APPEND' | 'REPLACE') => void;
   onUpdateCustomer: (updatedCustomer: Customer) => void;
   onDeleteCustomer: (customerId: string) => void;
   onAdjustBudget: (customerId: string, newBudget: number, reason: string) => void;

@@ -30,7 +30,7 @@ interface AddCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveCustomer: (customer: Customer) => void;
-  onSaveBatchCustomers?: (customers: Customer[]) => void;
+  onSaveBatchCustomers?: (customers: Customer[], importMode: 'APPEND' | 'REPLACE') => void;
   initialMode?: 'single' | 'excel';
 }
 
@@ -85,6 +85,8 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const [isParsing, setIsParsing] = useState(false);
   const [excelResult, setExcelResult] = useState<CustomerExcelImportResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
+  // 엑셀 일괄 등록 반영 방식 — 기존 회원 목록에 추가할지, 전체를 새 목록으로 교체할지
+  const [importMode, setImportMode] = useState<'APPEND' | 'REPLACE'>('APPEND');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -96,6 +98,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       setMode('single');
       setExcelResult(null);
       setParseError(null);
+      setImportMode('APPEND');
     }, 200);
   };
 
@@ -193,6 +196,13 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       return;
     }
 
+    if (importMode === 'REPLACE') {
+      const confirmed = confirm(
+        '기존에 등록된 모든 회원과 거래내역이 삭제되고, 이번 엑셀 파일의 내용으로 완전히 교체됩니다.\n되돌릴 수 없습니다. 계속하시겠습니까?'
+      );
+      if (!confirmed) return;
+    }
+
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -223,7 +233,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     });
 
     if (onSaveBatchCustomers) {
-      onSaveBatchCustomers(batchCustomers);
+      onSaveBatchCustomers(batchCustomers, importMode);
     } else {
       batchCustomers.forEach(c => onSaveCustomer(c));
     }
@@ -555,6 +565,49 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                   </div>
                 </div>
 
+                {/* Import Mode: 기존 데이터에 추가할지, 전체를 새로 교체할지 선택 */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <label className="font-bold text-slate-800 block">반영 방식 선택</label>
+                    <p className="text-slate-500 text-[11px]">
+                      기존 회원 목록에 이번 엑셀 내용을 추가하거나, 기존 회원·거래내역을 모두 지우고 이번 엑셀 내용으로 새로 교체할 수 있습니다.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setImportMode('APPEND')}
+                      className={`px-3 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer ${
+                        importMode === 'APPEND'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      기존 데이터에 추가 (추천)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportMode('REPLACE')}
+                      className={`px-3 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer ${
+                        importMode === 'REPLACE'
+                          ? 'bg-rose-50 border-rose-500 text-rose-700'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      기존 회원 전체 교체
+                    </button>
+                  </div>
+                </div>
+
+                {importMode === 'REPLACE' && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                    <span className="font-medium text-[11px]">
+                      기존에 등록된 모든 회원과 거래내역이 삭제되고, 이번 엑셀 파일의 내용으로 완전히 교체됩니다. 되돌릴 수 없으니 신중히 선택해주세요.
+                    </span>
+                  </div>
+                )}
+
                 {/* Table Preview */}
                 <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
                   <table className="w-full text-left text-xs border-collapse">
@@ -628,14 +681,18 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 disabled={!excelResult || excelResult.validRowsCount === 0}
                 className={`px-5 py-2 rounded-lg font-semibold transition-all flex items-center gap-1.5 shadow-sm ${
                   excelResult && excelResult.validRowsCount > 0
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-emerald-200'
+                    ? importMode === 'REPLACE'
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-rose-200'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-emerald-200'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>
                   {excelResult
-                    ? `${excelResult.validRowsCount}명 회원 일괄 등록 및 배정 완료`
+                    ? importMode === 'REPLACE'
+                      ? `${excelResult.validRowsCount}명으로 전체 교체`
+                      : `${excelResult.validRowsCount}명 회원 일괄 등록 및 배정 완료`
                     : '엑셀 데이터 일괄 등록'}
                 </span>
               </button>

@@ -271,9 +271,12 @@ export default function App() {
   };
 
   // Add Batch Customers Handler (Excel)
-  const handleSaveBatchCustomers = (newCustomers: Customer[]) => {
+  // importMode: 'APPEND'(기본값) - 기존 회원/거래내역에 이번 배치를 추가.
+  // 'REPLACE' - 기존 회원과 거래내역을 모두 지우고 이번 배치만 남긴다(엑셀 일괄 등록의
+  // "기존 회원 전체 교체" 옵션에서 사용). 지워지는 기존 회원의 거래내역을 그대로 두면
+  // 삭제된 회원을 가리키는 고아 데이터가 되므로 거래내역도 함께 교체한다.
+  const handleSaveBatchCustomers = (newCustomers: Customer[], importMode: 'APPEND' | 'REPLACE' = 'APPEND') => {
     if (newCustomers.length === 0) return;
-    setCustomers(prev => [...newCustomers, ...prev]);
 
     const now = new Date();
     const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -295,8 +298,15 @@ export default function App() {
       paymentMethod: '포인트 예산 승인',
     }));
 
-    setTransactions(prev => [...batchTxns, ...prev]);
-    setToastMessage(`총 ${newCustomers.length}명의 회원이 엑셀로 일괄 등록 및 포인트 배정되었습니다.`);
+    if (importMode === 'REPLACE') {
+      setCustomers(newCustomers);
+      setTransactions(batchTxns);
+      setToastMessage(`기존 회원·거래내역을 모두 지우고, 엑셀로 업로드한 ${newCustomers.length}명으로 전체 교체했습니다.`);
+    } else {
+      setCustomers(prev => [...newCustomers, ...prev]);
+      setTransactions(prev => [...batchTxns, ...prev]);
+      setToastMessage(`총 ${newCustomers.length}명의 회원이 엑셀로 일괄 등록 및 포인트 배정되었습니다.`);
+    }
     setTimeout(() => setToastMessage(null), 4000);
   };
 
