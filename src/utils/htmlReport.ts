@@ -90,7 +90,7 @@ export function generateStatusReportHtml({
     minute: '2-digit',
   });
   const todayStr = now.toISOString().slice(0, 10);
-  const reportTitle = `멤버십 포인트 사용 현황 보고서(${todayStr})`;
+  const reportTitle = `멤버십 포인트 사용 현황 보고서 (${todayStr})`;
 
   const orgMap: Record<string, { company: string; customers: Customer[]; totalBudget: number; totalUsed: number; totalRemaining: number }> = {};
   customers.forEach(c => {
