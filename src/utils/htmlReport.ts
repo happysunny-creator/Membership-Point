@@ -41,6 +41,10 @@ function waitForFontsAndPaint(win: (Window & typeof globalThis) | null): Promise
 // 부모 창의 origin이 아니라 파일시스템 루트를 기준으로 풀린다. 브라우저 개발 서버에서는
 // 우연히 동작하지만, Electron 패키징 후 앱이 file:///.../dist/index.html로 로드되는
 // 폐쇄망 PC의 실제 exe에서는 상대경로여야만 file:///.../dist/fonts/...로 정확히 풀린다.
+// unicode-range로 한글 영역만 LG Smart가 담당하게 하고 영문/숫자는 폴백 폰트로 넘기는
+// 방법도, foreignObjectRendering(브라우저 자체 렌더러 사용)으로 바꾸는 방법도 시도해봤으나
+// (html2canvas 호출부의 주석 참고) 각각 다른 새 문제를 만들어 전부 되돌렸다. 지금은
+// 아래 font-face + 기본 html2canvas 렌더러 조합만 사용한다.
 const REPORT_FONT_FACE = `
   @font-face {
     font-family: 'LG Smart';
@@ -151,7 +155,7 @@ export function generateStatusReportHtml({
   * { box-sizing: border-box; font-family: inherit; line-height: inherit; }
   body {
     margin: 0;
-    padding: 40px 48px;
+    padding: 0;
     font-family: ${REPORT_FONT_STACK};
     font-size: 13px;
     line-height: 1.5;
@@ -160,7 +164,7 @@ export function generateStatusReportHtml({
   }
   .sheet {
     max-width: 960px;
-    margin: 0 auto;
+    margin: 40px auto;
     background: #ffffff;
     border-radius: 16px;
     padding: 40px 44px 48px;
@@ -258,7 +262,7 @@ export function generateStatusReportHtml({
   }
   @media print {
     body { background: #fff; padding: 0; }
-    .sheet { box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    .sheet { box-shadow: none; border-radius: 0; max-width: none; padding: 0; margin: 0; }
   }
 </style>
 </head>
@@ -523,7 +527,7 @@ export function generateMemberUsageReportHtml({ customer, transactions }: Member
   }
   @media print {
     body { background: #fff; padding: 0; }
-    .sheet { box-shadow: none; border-radius: 0; max-width: none; padding: 0; }
+    .sheet { box-shadow: none; border-radius: 0; max-width: none; padding: 0; margin: 0; }
   }
 </style>
 </head>
@@ -634,12 +638,23 @@ export async function downloadMemberUsageReportPdf(params: MemberUsageReportPara
     ]);
     iframe.style.height = `${doc.body.scrollHeight}px`;
 
-    // foreignObjectRendering: html2canvas의 기본 모드는 텍스트를 직접 캔버스에 그리면서
-    // 글자 폭을 자체적으로(부정확하게) 계산하는데, 커스텀 서체(LG Smart)로 한글과
-    // 영문/숫자가 섞인 텍스트(예: "미래기술R&D센터")를 그릴 때 두 구간의 경계에서
-    // 위치 계산이 어긋나 글자가 겹치거나 깨져 보인다. foreignObjectRendering을 켜면
-    // 브라우저 자체 렌더링 엔진에 텍스트 배치를 그대로 맡겨 이 문제가 사라진다.
-    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', foreignObjectRendering: true });
+    // foreignObjectRendering을 두 차례 시도했다: 1차는 내용이 왼쪽으로 쏠리고 우측 열이
+    // 잘리는 회귀가 있었고, body padding→.sheet margin으로 그 원인을 고친 2차에서는
+    // 그 문제는 해결됐지만 이번엔 상단 제목 일부가 위로 잘려나가는 새 문제가 생겼다.
+    // 매번 다른 부위가 깨져 안정적으로 고칠 수 없다고 판단해 기본 렌더러로 최종 롤백한다.
+    // 기본 렌더러는 "미래기술R&D센터"처럼 한글 바로 뒤에 영문이 붙는 일부 조직명에서
+    // 글자가 살짝 겹쳐 보이는 정도이며, 문서 전체가 깨지는 foreignObjectRendering 쪽보다
+    // 안전하다.
+    const canvas = await html2canvas(sheet, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      // html2canvas는 렌더링 모드와 무관하게 항상 문서를 한 번 복제해서 그 복제본을
+      // 그리는데, 복제본은 @font-face 리소스를 자기 힘으로 다시 불러온다. 원본
+      // iframe에서 이미 기다린 document.fonts.ready는 이 복제본에는 적용되지 않으므로,
+      // 복제본 자체의 폰트 로딩도 따로 기다려야 LG Smart 대신 시스템 폰트로 그려지는
+      // 순간을 캡처하는 걸 막는다.
+      onclone: (clonedDoc: Document) => clonedDoc.fonts.ready,
+    });
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -721,12 +736,23 @@ export async function downloadStatusReportPdf(params: StatusReportParams): Promi
     ]);
     iframe.style.height = `${doc.body.scrollHeight}px`;
 
-    // foreignObjectRendering: html2canvas의 기본 모드는 텍스트를 직접 캔버스에 그리면서
-    // 글자 폭을 자체적으로(부정확하게) 계산하는데, 커스텀 서체(LG Smart)로 한글과
-    // 영문/숫자가 섞인 텍스트(예: "미래기술R&D센터")를 그릴 때 두 구간의 경계에서
-    // 위치 계산이 어긋나 글자가 겹치거나 깨져 보인다. foreignObjectRendering을 켜면
-    // 브라우저 자체 렌더링 엔진에 텍스트 배치를 그대로 맡겨 이 문제가 사라진다.
-    const canvas = await html2canvas(sheet, { scale: 2, backgroundColor: '#ffffff', foreignObjectRendering: true });
+    // foreignObjectRendering을 두 차례 시도했다: 1차는 내용이 왼쪽으로 쏠리고 우측 열이
+    // 잘리는 회귀가 있었고, body padding→.sheet margin으로 그 원인을 고친 2차에서는
+    // 그 문제는 해결됐지만 이번엔 상단 제목 일부가 위로 잘려나가는 새 문제가 생겼다.
+    // 매번 다른 부위가 깨져 안정적으로 고칠 수 없다고 판단해 기본 렌더러로 최종 롤백한다.
+    // 기본 렌더러는 "미래기술R&D센터"처럼 한글 바로 뒤에 영문이 붙는 일부 조직명에서
+    // 글자가 살짝 겹쳐 보이는 정도이며, 문서 전체가 깨지는 foreignObjectRendering 쪽보다
+    // 안전하다.
+    const canvas = await html2canvas(sheet, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      // html2canvas는 렌더링 모드와 무관하게 항상 문서를 한 번 복제해서 그 복제본을
+      // 그리는데, 복제본은 @font-face 리소스를 자기 힘으로 다시 불러온다. 원본
+      // iframe에서 이미 기다린 document.fonts.ready는 이 복제본에는 적용되지 않으므로,
+      // 복제본 자체의 폰트 로딩도 따로 기다려야 LG Smart 대신 시스템 폰트로 그려지는
+      // 순간을 캡처하는 걸 막는다.
+      onclone: (clonedDoc: Document) => clonedDoc.fonts.ready,
+    });
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
