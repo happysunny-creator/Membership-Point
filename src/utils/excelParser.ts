@@ -2,6 +2,30 @@ import * as XLSX from 'xlsx';
 import { CategoryId, Customer, TransactionType } from '../types';
 import { separateNameAndPosition } from './nameParser';
 
+// 엑셀에서 "본사"처럼 여러 행에 걸쳐 반복되는 조직명/소속 등을 셀 병합으로 한 번만
+// 적어두는 경우가 많다. SheetJS는 병합된 범위의 좌상단 셀에만 값을 담고 나머지 셀은
+// 빈 값으로 읽기 때문에, 그대로 sheet_to_json을 호출하면 병합 아래쪽 행들은 "조직명
+// 누락"으로 잘못 판정되어 등록에서 조용히 빠지게 된다. sheet_to_json을 호출하기 전에
+// 병합 범위마다 좌상단 셀 값을 나머지 셀에도 채워 넣어 이 문제를 막는다.
+function fillMergedCells(worksheet: XLSX.WorkSheet): void {
+  const merges = worksheet['!merges'];
+  if (!merges || merges.length === 0) return;
+
+  merges.forEach(range => {
+    const anchorAddress = XLSX.utils.encode_cell({ r: range.s.r, c: range.s.c });
+    const anchorCell = worksheet[anchorAddress];
+    if (!anchorCell) return;
+
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        if (r === range.s.r && c === range.s.c) continue;
+        const address = XLSX.utils.encode_cell({ r, c });
+        worksheet[address] = { ...anchorCell };
+      }
+    }
+  });
+}
+
 export interface ParsedExcelRow {
   index: number;
   company: string;
@@ -131,6 +155,7 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
 
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
+        fillMergedCells(worksheet);
 
         const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
 
@@ -474,6 +499,7 @@ export async function parseOrgNameExcelFile(file: File): Promise<OrgNameExcelImp
 
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
+        fillMergedCells(worksheet);
         const rawJson = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
 
         if (rawJson.length === 0) {
@@ -670,6 +696,7 @@ export async function parseCustomerExcelFile(file: File): Promise<CustomerExcelI
 
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
+        fillMergedCells(worksheet);
         const rawJson = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
 
         if (rawJson.length === 0) {
