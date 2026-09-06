@@ -230,11 +230,13 @@ export function getStatusBadge(status: CustomerStatus): {
 }
 
 // 회원별 거래 내역 표의 "내용 / 항목" 칸에 보여줄 텍스트 — 실제 사용(SPEND) 내역은 등록된
-// 설명을 그대로 보여주고, 예산 배정/조정(BUDGET_ALLOCATION)이나 충전·환불(RECHARGE/REFUND)처럼
-// 시스템이 자동 생성한 거래는 각자 다른 원본 설명 대신 "포인트 배정"/"포인트 회수"로 통일해서 보여준다.
+// 설명을 그대로 보여주고, 시스템이 자동 생성/분류하는 거래는 각자 다른 원본 설명 대신
+// 유형별 고정 문구로 통일해서 보여준다: 예산 배정/조정은 "포인트 배정", 사용 취소·환불
+// (REFUND)은 "포인트 사용 취소", 충전(RECHARGE)은 "포인트 회수".
 export function getTransactionContentLabel(txn: { type: TransactionType; description: string }): string {
   if (txn.type === 'BUDGET_ALLOCATION') return '포인트 배정';
-  if (txn.type === 'RECHARGE' || txn.type === 'REFUND') return '포인트 회수';
+  if (txn.type === 'REFUND') return '포인트 사용 취소';
+  if (txn.type === 'RECHARGE') return '포인트 회수';
   return txn.description;
 }
 
