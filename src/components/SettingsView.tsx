@@ -3,7 +3,7 @@ import { Customer, SystemSettings } from '../types';
 import { downloadExcelTemplate, parseOrgNameExcelFile, downloadOrgNameExcelTemplate, downloadCustomerExcelTemplate } from '../utils/excelParser';
 import { buildManagerSummaries, buildManagerMailtoLink } from '../utils/managerMailto';
 import { buildOrgSummaries, buildOrgMailtoLink } from '../utils/orgMailto';
-import { formatPoints, formatPercent } from '../utils/formatters';
+import { formatPoints, formatPercent, sortByOrgPriority } from '../utils/formatters';
 import { AddCustomerModal } from './AddCustomerModal';
 import {
   Settings,
@@ -117,7 +117,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // 조직별 실적 안내 이메일 초안 작성용 요약 (보고서 관리 탭) — 회원 개별 담당자가 아니라
   // "조직 표시 우선순위"에서 등록한 조직별 담당자(들)에게 조직 전체 실적을 안내한다.
-  const orgSummaries = useMemo(() => buildOrgSummaries(customers, settings.orgManagers), [customers, settings.orgManagers]);
+  // "조직별 실적 안내" 표는 "조직 표시 우선순위"에서 정한 순서를 그대로 따른다
+  // (예산관리·실적관리 화면과 동일한 정렬 기준). 우선순위 목록에 없는 조직은
+  // 소속 인원이 많은 순으로 뒤에 붙는다.
+  const orgSummaries = useMemo(
+    () =>
+      sortByOrgPriority(
+        buildOrgSummaries(customers, settings.orgManagers),
+        settings.orgPriorityOrder,
+        (a, b) => b.members.length - a.members.length
+      ),
+    [customers, settings.orgManagers, settings.orgPriorityOrder]
+  );
   const mailableOrgSummaries = useMemo(
     () => orgSummaries.filter(s => s.managers.length > 0),
     [orgSummaries]
