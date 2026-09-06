@@ -429,18 +429,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveSubTab('usage-rates')}
+            onClick={() => setActiveSubTab('reports')}
             className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeSubTab === 'usage-rates'
-                ? 'bg-white text-indigo-900 shadow-xs border border-indigo-200'
+              activeSubTab === 'reports'
+                ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Gauge className="w-4 h-4 text-indigo-600" />
-            <span>포인트 관리기준</span>
-            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-full font-bold">
-              4단계
-            </span>
+            <FileText className="w-4 h-4 text-indigo-600" />
+            <span>보고서 관리(메일발송)</span>
           </button>
 
           <button
@@ -458,15 +455,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveSubTab('reports')}
+            onClick={() => setActiveSubTab('usage-rates')}
             className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeSubTab === 'reports'
-                ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200'
+              activeSubTab === 'usage-rates'
+                ? 'bg-white text-indigo-900 shadow-xs border border-indigo-200'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <FileText className="w-4 h-4 text-indigo-600" />
-            <span>보고서 관리</span>
+            <Gauge className="w-4 h-4 text-indigo-600" />
+            <span>포인트 관리기준</span>
+            <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-full font-bold">
+              4단계
+            </span>
           </button>
         </div>
       </div>
@@ -1344,7 +1344,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="flex items-center space-x-2.5">
                 <Mail className="w-4 h-4 text-indigo-600" />
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">담당자별 실적 안내</h4>
+                  <h4 className="text-xs font-bold text-slate-900">담당자(비서) 실적 안내</h4>
                   <p className="text-[11px] text-slate-500">
                     담당자별로 담당 회원의 포인트 사용 실적을 정리한 이메일 초안을 작성합니다. 초안만 열리며, 발송은 직접 눌러야 합니다.
                   </p>
@@ -1362,7 +1362,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>담당자에게 일괄 발송 하기</span>
+                <span>담당자(비서)에게 일괄 발송하기</span>
               </button>
             </div>
 
