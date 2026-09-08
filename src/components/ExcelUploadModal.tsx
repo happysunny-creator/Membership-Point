@@ -232,6 +232,16 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            {parseResult && (
+              <button
+                onClick={handleReset}
+                className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg flex items-center gap-1.5 transition-colors"
+                title="지금 불러온 파일을 취소하고 다른 엑셀 파일을 다시 선택합니다"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>다른 파일 선택 업로드</span>
+              </button>
+            )}
             <button
               onClick={downloadExcelTemplate}
               className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg flex items-center gap-1.5 transition-colors"
@@ -427,17 +437,9 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
               {/* Parsed Data Preview Table */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-slate-800">
-                    파싱된 데이터 미리보기 (총 {parseResult.rows.length}행)
-                  </h3>
-                  <button
-                    onClick={handleReset}
-                    className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium"
-                  >
-                    <RefreshCw className="w-3 h-3" /> 다른 파일 선택
-                  </button>
-                </div>
+                <h3 className="text-xs font-bold text-slate-800">
+                  파싱된 데이터 미리보기 (총 {parseResult.rows.length}행)
+                </h3>
 
                 <div className="border border-slate-200 rounded-xl overflow-hidden max-h-72 overflow-y-auto text-xs">
                   <table className="w-full text-left border-collapse">
