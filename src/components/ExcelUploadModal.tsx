@@ -96,10 +96,13 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
     const validRows = parseResult.rows.filter(r => r.isValid);
     const newCustomersMap: Map<string, Customer> = new Map();
-    // 이미 등록된 회원인데 엑셀의 조직명/소속/직위가 회원 프로필에 저장된 값과 다른
-    // 경우(예: "본사"로 새로 보고되었는데 기존에는 다른 조직으로 등록되어 있던 회원) —
-    // 회원 ID를 키로 모아뒀다가 아래에서 newCustomers와 함께 넘겨 회원 프로필도
-    // 엑셀 값으로 함께 갱신한다(App.tsx의 병합 로직이 같은 id를 덮어쓴다).
+    // 이미 등록된 회원의 소속/직위가 엑셀에 적힌 값과 다른 경우 — 회원 ID를 키로
+    // 모아뒀다가 아래에서 newCustomers와 함께 넘겨 회원 프로필도 엑셀 값으로 함께
+    // 갱신한다(App.tsx의 병합 로직이 같은 id를 덮어쓴다). 조직명은 여기 포함하지
+    // 않는다: 조직명은 항상 "회원 등록"에 등록된 값을 신뢰해야 하고, 실적 엑셀의
+    // 조직명 칸(형식이 제각각이거나 오타가 섞이기 쉬운 값)은 조직별 실적 분석에
+    // 절대 쓰지 않기로 했다 — 그래야 실적 업로드 한 번으로 회원의 소속 조직이
+    // 조용히 바뀌어버리는 일이 없다.
     const customerProfileUpdates: Map<string, Customer> = new Map();
     const transactionsToImport: Transaction[] = [];
 
@@ -121,23 +124,21 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
       if (existing) {
         customerId = existing.id;
-        const excelCompany = row.company.trim();
-        // 엑셀에 조직명/소속/직위가 적혀 있고 기존 회원 프로필의 값과 다르면, 예전에는
-        // 무조건 기존 프로필 값으로 덮어써서 엑셀에 "본사"라고 적어도 조용히 무시되고
-        // 원래 값으로 남는 문제가 있었다. 이제는 엑셀에 적힌 값을 그대로 이번 거래에
-        // 반영하고, 값이 실제로 다를 때만 회원 프로필도 함께 갱신한다.
-        const companyChanged = excelCompany && excelCompany !== existing.company;
+        // 조직명(회사명)은 성함으로 매칭된 "회원 등록" 정보를 항상 그대로 쓴다 —
+        // 엑셀의 조직명 칸은 조직별 실적 분석에 절대 반영하지 않는다.
+        customerCompany = existing.company;
+
+        // 소속/직위는 엑셀에 적힌 값을 그대로 이번 거래에 반영하고, 값이 실제로
+        // 기존 회원 프로필과 다를 때만 회원 프로필도 함께 갱신한다.
         const departmentChanged = excelDepartment && excelDepartment !== existing.department;
         const positionChanged = excelPosition && excelPosition !== (existing.position || '');
 
-        customerCompany = companyChanged ? excelCompany : existing.company;
         customerDepartment = departmentChanged ? excelDepartment : existing.department;
         customerPosition = positionChanged ? excelPosition : (existing.position || '');
 
-        if (companyChanged || departmentChanged || positionChanged) {
+        if (departmentChanged || positionChanged) {
           customerProfileUpdates.set(existing.id, {
             ...existing,
-            ...(companyChanged && { company: excelCompany }),
             ...(departmentChanged && { department: excelDepartment }),
             ...(positionChanged && { position: excelPosition }),
           });
