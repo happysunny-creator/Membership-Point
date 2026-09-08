@@ -3,6 +3,7 @@ import { Customer, SystemSettings } from '../types';
 import { downloadExcelTemplate, parseOrgNameExcelFile, downloadOrgNameExcelTemplate, downloadCustomerExcelTemplate } from '../utils/excelParser';
 import { buildManagerSummaries, buildManagerMailtoLink } from '../utils/managerMailto';
 import { buildOrgSummaries, buildOrgMailtoLink } from '../utils/orgMailto';
+import { downloadOrgUsageReportPdf } from '../utils/htmlReport';
 import { formatPoints, formatPercent, sortByOrgPriority } from '../utils/formatters';
 import { AddCustomerModal } from './AddCustomerModal';
 import {
@@ -146,6 +147,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       link.click();
       document.body.removeChild(link);
     });
+  };
+
+  // "조직별 실적 안내" 표의 "실적 보고서 PDF" 버튼 — 담당자 이메일이 등록되어 있지
+  // 않아 이메일 안내를 보낼 수 없는 조직도, PDF 보고서만큼은 항상 바로 저장할 수
+  // 있게 한다(조직별 실적 분석 화면의 "실적 보고서" 버튼과 동일한 보고서).
+  const [downloadingOrgReport, setDownloadingOrgReport] = useState<string | null>(null);
+  const handleDownloadOrgReportPdf = async (summary: (typeof orgSummaries)[number]) => {
+    if (downloadingOrgReport) return;
+    setDownloadingOrgReport(summary.company);
+    try {
+      await downloadOrgUsageReportPdf({
+        orgName: summary.company,
+        customers: summary.members,
+        managers: summary.managers,
+      });
+    } catch {
+      window.alert('조직 실적 보고서 PDF 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setDownloadingOrgReport(null);
+    }
   };
 
   // Organization display priority order (조직 표시 우선순위)
@@ -1403,23 +1424,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <td className="py-2.5 px-3 text-right font-semibold text-slate-700">{formatPoints(summary.totalBudget)}</td>
                       <td className="py-2.5 px-3 text-right font-semibold text-blue-700">{formatPoints(summary.totalUsed)}</td>
                       <td className="py-2.5 px-3 text-right font-semibold text-slate-700">{formatPercent(summary.burnRate)}</td>
-                      <td className="py-2.5 px-3 text-center">
-                        {summary.managers.length > 0 ? (
-                          <a
-                            href={buildOrgMailtoLink(summary)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg font-bold transition-colors"
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadOrgReportPdf(summary)}
+                            disabled={downloadingOrgReport === summary.company}
+                            title="이 조직의 실적 보고서를 PDF로 바로 저장합니다."
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                           >
-                            <Send className="w-3 h-3" />
-                            <span>이메일 안내 작성</span>
-                          </a>
-                        ) : (
-                          <span
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg font-semibold cursor-not-allowed"
-                            title="이 조직의 담당자 이메일이 등록되어 있지 않습니다. 조직 목록 관리에서 등록해주세요."
-                          >
-                            이메일 미등록
-                          </span>
-                        )}
+                            <FileDown className="w-3 h-3" />
+                            <span>{downloadingOrgReport === summary.company ? '저장 중...' : 'PDF 저장'}</span>
+                          </button>
+                          {summary.managers.length > 0 ? (
+                            <a
+                              href={buildOrgMailtoLink(summary)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg font-bold transition-colors"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>이메일 안내 작성</span>
+                            </a>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg font-semibold cursor-not-allowed"
+                              title="이 조직의 담당자 이메일이 등록되어 있지 않습니다. 조직 목록 관리에서 등록해주세요."
+                            >
+                              이메일 미등록
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
