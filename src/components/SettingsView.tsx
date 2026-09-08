@@ -1336,7 +1336,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex items-center space-x-2.5 pb-4 border-b border-slate-100">
             <FileText className="w-5 h-5 text-indigo-600" />
             <div>
-              <h3 className="text-sm font-bold text-slate-900">보고서 관리</h3>
+              <h3 className="text-sm font-bold text-slate-900">전체 실적 보고서 송출</h3>
               <p className="text-xs text-slate-500">조직별·회원별 포인트 사용 현황을 담은 보고서를 원하는 형식으로 송출합니다.</p>
             </div>
           </div>
