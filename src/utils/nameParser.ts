@@ -89,13 +89,17 @@ export function separateNameAndPosition(
     name = extractedName;
   }
 
-  // 2. If position is already explicitly given and name ends with that position, strip it
+  // 2. If position is already explicitly given and name ends with that position, strip it.
+  // name.length > position.length를 반드시 확인해야 한다 — 성함과 직위 칸에 우연히
+  // 같은 값(예: "본사용"처럼 실제 인물이 아니라 조직/부서를 나타내는 이름을 성함에
+  // 적고, 직위 칸에도 같은 값이 들어간 경우)이 들어오면 name이 position과 완전히
+  // 같아져서 전체가 잘려나가 빈 문자열이 되고, "성함 누락" 오류로 잘못 처리된다.
   if (position) {
     // Remove "님" if exists in comparison
     const cleanPos = position.replace(/님$/, '');
-    if (name.endsWith(position)) {
+    if (name.length > position.length && name.endsWith(position)) {
       name = name.slice(0, -position.length).trim();
-    } else if (name.endsWith(cleanPos)) {
+    } else if (name.length > cleanPos.length && name.endsWith(cleanPos)) {
       name = name.slice(0, -cleanPos.length).trim();
     }
   }
