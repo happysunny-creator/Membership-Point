@@ -372,9 +372,20 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
             totalPoints += numericAmount;
           }
 
+          // 조직명 칸을 비워둔 채로, "본사"처럼 특정 개인이 아니라 조직/부서 자체를
+          // 성함 칸에 적어 회사 전체(또는 부서) 공통 지출 한 줄로 기록하는 경우가 있다.
+          // 이럴 때 매칭되는 기존 회원도 없으면 예전에는 조직명이 뭉뚱그려 "기타"로
+          // 들어가 버려, 정작 "본사" 실적을 올려도 "본사"가 아니라 "기타"로 잡히는
+          // 문제가 있었다. 조직명이 비어 있고 매칭되는 기존 회원도 없을 때는, 성함
+          // 칸에 적힌 값을 그대로 조직명으로도 사용한다(그 값 자체가 이번 지출의
+          // 주체를 나타내는 경우가 많기 때문).
+          const fallbackCompany = matchedCustomer
+            ? matchedCustomer.company
+            : separatedCustomerName || '기타';
+
           parsedRows.push({
             index: idx + 1,
-            company: String(company).trim() || (matchedCustomer ? matchedCustomer.company : '기타'),
+            company: String(company).trim() || fallbackCompany,
             department: String(department).trim() || (matchedCustomer ? matchedCustomer.department : '일반부서'),
             customerName: separatedCustomerName,
             position: separatedPosition || (matchedCustomer?.position || '직원'),
