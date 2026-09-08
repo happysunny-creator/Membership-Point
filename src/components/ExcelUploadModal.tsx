@@ -96,6 +96,11 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
     const validRows = parseResult.rows.filter(r => r.isValid);
     const newCustomersMap: Map<string, Customer> = new Map();
+    // 이미 등록된 회원인데 엑셀의 조직명이 회원 프로필에 저장된 조직명과 다른 경우
+    // (예: "본사"로 새로 보고되었는데 기존에는 다른 조직으로 등록되어 있던 회원) —
+    // 회원 ID를 키로 모아뒀다가 아래에서 newCustomers와 함께 넘겨 회원 프로필도
+    // 엑셀의 조직명으로 함께 갱신한다(App.tsx의 병합 로직이 같은 id를 덮어쓴다).
+    const customerCompanyUpdates: Map<string, Customer> = new Map();
     const transactionsToImport: Transaction[] = [];
 
     const now = new Date();
@@ -112,7 +117,17 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
       if (existing) {
         customerId = existing.id;
-        customerCompany = existing.company;
+        const excelCompany = row.company.trim();
+        // 엑셀에 조직명이 적혀 있고 기존 회원 프로필의 조직명과 다르면, 예전에는
+        // 무조건 기존 프로필의 조직명으로 덮어써서 엑셀에 "본사"라고 적어도 조용히
+        // 무시되고 원래 조직으로 남는 문제가 있었다. 이제는 엑셀에 적힌 조직명을
+        // 그대로 이번 거래에 반영하고, 회원 프로필의 조직명도 함께 갱신한다.
+        if (excelCompany && excelCompany !== existing.company) {
+          customerCompany = excelCompany;
+          customerCompanyUpdates.set(existing.id, { ...existing, company: excelCompany });
+        } else {
+          customerCompany = existing.company;
+        }
       } else {
         // Prepare new customer if not already staged
         const stagedCustomerKey = row.customerName.toLowerCase().trim();
@@ -160,7 +175,11 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
       });
     });
 
-    onImportComplete(transactionsToImport, Array.from(newCustomersMap.values()), importMode);
+    onImportComplete(
+      transactionsToImport,
+      [...newCustomersMap.values(), ...customerCompanyUpdates.values()],
+      importMode
+    );
     onClose();
   };
 
