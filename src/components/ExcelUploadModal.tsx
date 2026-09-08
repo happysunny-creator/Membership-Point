@@ -96,11 +96,11 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
     const validRows = parseResult.rows.filter(r => r.isValid);
     const newCustomersMap: Map<string, Customer> = new Map();
-    // 이미 등록된 회원인데 엑셀의 조직명이 회원 프로필에 저장된 조직명과 다른 경우
-    // (예: "본사"로 새로 보고되었는데 기존에는 다른 조직으로 등록되어 있던 회원) —
+    // 이미 등록된 회원인데 엑셀의 조직명/소속/직위가 회원 프로필에 저장된 값과 다른
+    // 경우(예: "본사"로 새로 보고되었는데 기존에는 다른 조직으로 등록되어 있던 회원) —
     // 회원 ID를 키로 모아뒀다가 아래에서 newCustomers와 함께 넘겨 회원 프로필도
-    // 엑셀의 조직명으로 함께 갱신한다(App.tsx의 병합 로직이 같은 id를 덮어쓴다).
-    const customerCompanyUpdates: Map<string, Customer> = new Map();
+    // 엑셀 값으로 함께 갱신한다(App.tsx의 병합 로직이 같은 id를 덮어쓴다).
+    const customerProfileUpdates: Map<string, Customer> = new Map();
     const transactionsToImport: Transaction[] = [];
 
     const now = new Date();
@@ -109,6 +109,10 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
     validRows.forEach((row, index) => {
       let customerId = row.existingCustomerId;
       let customerCompany = row.company;
+      const excelDepartment = row.department.trim();
+      const excelPosition = row.position.trim();
+      let customerDepartment = excelDepartment;
+      let customerPosition = excelPosition;
 
       // Check if existing customer matches
       const existing = existingCustomers.find(
@@ -118,15 +122,25 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
       if (existing) {
         customerId = existing.id;
         const excelCompany = row.company.trim();
-        // 엑셀에 조직명이 적혀 있고 기존 회원 프로필의 조직명과 다르면, 예전에는
-        // 무조건 기존 프로필의 조직명으로 덮어써서 엑셀에 "본사"라고 적어도 조용히
-        // 무시되고 원래 조직으로 남는 문제가 있었다. 이제는 엑셀에 적힌 조직명을
-        // 그대로 이번 거래에 반영하고, 회원 프로필의 조직명도 함께 갱신한다.
-        if (excelCompany && excelCompany !== existing.company) {
-          customerCompany = excelCompany;
-          customerCompanyUpdates.set(existing.id, { ...existing, company: excelCompany });
-        } else {
-          customerCompany = existing.company;
+        // 엑셀에 조직명/소속/직위가 적혀 있고 기존 회원 프로필의 값과 다르면, 예전에는
+        // 무조건 기존 프로필 값으로 덮어써서 엑셀에 "본사"라고 적어도 조용히 무시되고
+        // 원래 값으로 남는 문제가 있었다. 이제는 엑셀에 적힌 값을 그대로 이번 거래에
+        // 반영하고, 값이 실제로 다를 때만 회원 프로필도 함께 갱신한다.
+        const companyChanged = excelCompany && excelCompany !== existing.company;
+        const departmentChanged = excelDepartment && excelDepartment !== existing.department;
+        const positionChanged = excelPosition && excelPosition !== (existing.position || '');
+
+        customerCompany = companyChanged ? excelCompany : existing.company;
+        customerDepartment = departmentChanged ? excelDepartment : existing.department;
+        customerPosition = positionChanged ? excelPosition : (existing.position || '');
+
+        if (companyChanged || departmentChanged || positionChanged) {
+          customerProfileUpdates.set(existing.id, {
+            ...existing,
+            ...(companyChanged && { company: excelCompany }),
+            ...(departmentChanged && { department: excelDepartment }),
+            ...(positionChanged && { position: excelPosition }),
+          });
         }
       } else {
         // Prepare new customer if not already staged
@@ -136,10 +150,11 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
           const newCust: Customer = {
             id: generatedId,
             name: row.customerName,
+            position: excelPosition || undefined,
             email: `${row.customerName.toLowerCase().replace(/\s+/g, '')}@company.kr`,
             phone: '010-0000-0000',
             company: row.company || '신규 등록 기업',
-            department: '일반부서',
+            department: excelDepartment || '일반부서',
             tier: 'Gold',
             totalBudget: defaultNewCustomerBudget,
             usedPoints: 0,
@@ -162,6 +177,8 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
         customerId: customerId || `CUST-${Date.now()}`,
         customerName: row.customerName,
         customerCompany: customerCompany || '기업',
+        customerDepartment: customerDepartment || undefined,
+        customerPosition: customerPosition || undefined,
         type: row.type,
         amount: row.amount,
         categoryId: row.categoryId,
@@ -177,7 +194,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
 
     onImportComplete(
       transactionsToImport,
-      [...newCustomersMap.values(), ...customerCompanyUpdates.values()],
+      [...newCustomersMap.values(), ...customerProfileUpdates.values()],
       importMode
     );
     onClose();
