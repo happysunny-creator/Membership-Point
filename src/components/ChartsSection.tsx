@@ -224,8 +224,11 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({
     transactions.forEach(t => {
       if (t.status !== 'COMPLETED') return;
       let delta = 0;
+      // RECHARGE/REFUND는 유형 자체가 "차감" 방향이므로 amount의 부호와 무관하게
+      // 크기(Math.abs)만큼 뺀다 — 엑셀에서 환불 행을 음수로 적어온 경우 amount에
+      // 부호가 남아있을 수 있어, 그대로 빼면 방향이 이중으로 뒤집힌다.
       if (t.type === 'SPEND') delta = t.amount;
-      else if (t.type === 'RECHARGE' || t.type === 'REFUND') delta = -t.amount;
+      else if (t.type === 'RECHARGE' || t.type === 'REFUND') delta = -Math.abs(t.amount);
       else return;
 
       const key = t.timestamp.slice(0, 7); // "YYYY-MM"

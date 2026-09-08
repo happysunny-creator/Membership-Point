@@ -219,7 +219,7 @@ export default function App() {
             newUsed += newTxn.amount;
             newRemaining = Math.max(cust.totalBudget - newUsed, 0);
           } else if (newTxn.type === 'RECHARGE' || newTxn.type === 'REFUND') {
-            newUsed = Math.max(newUsed - newTxn.amount, 0);
+            newUsed = Math.max(newUsed - Math.abs(newTxn.amount), 0);
             newRemaining = cust.totalBudget - newUsed;
           }
 
@@ -419,7 +419,10 @@ export default function App() {
       if (t.type === 'SPEND' && t.status === 'COMPLETED') {
         customerSpendMap[t.customerId] = (customerSpendMap[t.customerId] || 0) + t.amount;
       } else if ((t.type === 'RECHARGE' || t.type === 'REFUND') && t.status === 'COMPLETED') {
-        customerSpendMap[t.customerId] = Math.max((customerSpendMap[t.customerId] || 0) - t.amount, 0);
+        // RECHARGE/REFUND는 "차감" 방향이 유형 자체로 이미 정해져 있으므로 크기만
+        // 반영한다 — amount에 부호가 남아있어도(엑셀에서 환불을 음수로 적어온 경우
+        // 등) 방향이 이중으로 뒤집히지 않도록 Math.abs()로 크기만 뺀다.
+        customerSpendMap[t.customerId] = Math.max((customerSpendMap[t.customerId] || 0) - Math.abs(t.amount), 0);
       }
 
       if (t.timestamp) {
@@ -464,7 +467,10 @@ export default function App() {
       if (t.type === 'SPEND' && t.status === 'COMPLETED') {
         customerSpendMap[t.customerId] = (customerSpendMap[t.customerId] || 0) + t.amount;
       } else if ((t.type === 'RECHARGE' || t.type === 'REFUND') && t.status === 'COMPLETED') {
-        customerSpendMap[t.customerId] = Math.max((customerSpendMap[t.customerId] || 0) - t.amount, 0);
+        // RECHARGE/REFUND는 "차감" 방향이 유형 자체로 이미 정해져 있으므로 크기만
+        // 반영한다 — amount에 부호가 남아있어도(엑셀에서 환불을 음수로 적어온 경우
+        // 등) 방향이 이중으로 뒤집히지 않도록 Math.abs()로 크기만 뺀다.
+        customerSpendMap[t.customerId] = Math.max((customerSpendMap[t.customerId] || 0) - Math.abs(t.amount), 0);
       }
 
       if (t.timestamp) {

@@ -82,8 +82,11 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
     setCurrentPage(1);
   }, [transactions, nameSearchQuery]);
 
+  // RECHARGE/REFUND는 유형 자체가 "차감" 방향을 의미하므로 amount의 부호와 무관하게
+  // 크기(Math.abs)만큼 뺀다 — 엑셀에서 환불 행을 음수로 적어온 경우 amount에 부호가
+  // 남아있을 수 있는데, 그대로 빼면 방향이 이중으로 뒤집혀 합계가 틀어진다.
   const totalFilteredAmount = visibleTransactions.reduce(
-    (sum, t) => sum + (t.type === 'SPEND' ? t.amount : -t.amount),
+    (sum, t) => sum + (t.type === 'SPEND' ? t.amount : -Math.abs(t.amount)),
     0
   );
 
@@ -227,14 +230,20 @@ export const TransactionHistoryTable: React.FC<TransactionHistoryTableProps> = (
                     </td>
 
                     {/* 7. 사용금액 — 환불/충전(REFUND·RECHARGE)은 사용실적에서 "빼는"
-                        금액이므로 항상 "-"를 붙여 표기한다. amount 자체는 이 유형에서
-                        항상 양수 크기로 저장되어 있다(방향은 type으로만 표현). 사용
+                        금액이므로 항상 "-"를 붙여 표기한다. amount는 수기 입력에서는
+                        양수 크기로, 엑셀 업로드에서는 원본 부호 그대로(음수로 적혀있을
+                        수 있음) 저장되어 둘 다 섞여 있을 수 있다 — Math.abs()로 크기만
+                        취해서 "-"를 두 번 붙이는(예: "--30,000") 문제를 막는다. 사용
                         (SPEND)은 음수 사용/정정을 그대로 표기해야 하므로 원래 부호를
                         그대로 쓴다. */}
                     <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
                       <div className="font-extrabold text-sm text-blue-600 font-mono">
                         {txn.type === 'REFUND' || txn.type === 'RECHARGE' ? '-' : ''}
-                        {formatPoints(txn.amount)}
+                        {formatPoints(
+                          txn.type === 'REFUND' || txn.type === 'RECHARGE'
+                            ? Math.abs(txn.amount)
+                            : txn.amount
+                        )}
                       </div>
                     </td>
 

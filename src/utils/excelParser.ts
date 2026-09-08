@@ -332,17 +332,12 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
 
           const categoryMeta = mapTextToCategory(categoryRaw || merchant || description);
           const txnType = mapTextToTransactionType(typeRaw);
-
-          // RECHARGE/REFUND/BUDGET_ALLOCATION 금액은 항상 양수로 저장해야 한다 — 이
-          // 유형들은 "환불/충전/배정된 금액이 얼마인지"를 나타내고, 사용실적 집계 쪽
-          // (recalculateCustomerBalances 등)에서 이미 "사용액 - 이 금액"으로 방향을
-          // 직접 빼고 있기 때문이다. 여기서 SPEND가 아닌 행의 부호까지 그대로 살려두면
-          // (예: 구분="환불", 사용금액=-30000처럼 부호가 이미 방향을 나타내는 표를 그대로
-          // 가져온 경우) 방향이 이중으로 반영되어 오히려 사용실적이 늘어나 버린다.
-          // SPEND는 "-1,000"처럼 음수 사용을 그대로 표기해야 하므로 부호를 보존한다.
-          if (txnType !== 'SPEND') {
-            numericAmount = Math.abs(numericAmount);
-          }
+          // 표기(화면에 보이는 금액)는 엑셀에 적힌 부호를 그대로 살려서 사용한다 —
+          // 환불/취소 행을 음수로 적어둔 경우 "-30,000"처럼 그대로 보여야 한다.
+          // 이 값을 회원 사용실적 집계에 반영할 때(App.tsx의 customerSpendMap 계산)는
+          // RECHARGE/REFUND 방향을 부호가 아니라 유형(type) 자체로 판단하고 크기만
+          // Math.abs()로 취하도록 되어 있어, 여기서 부호를 지우지 않아도 이중으로
+          // 반영되는 문제가 생기지 않는다.
 
           // Cleanly separate name and position if combined (e.g. "김민수 이사", "김민수(이사)")
           const { name: separatedCustomerName, position: separatedPosition } = separateNameAndPosition(
@@ -369,7 +364,12 @@ export async function parseExcelFile(file: File, existingCustomers: Customer[]):
           }
 
           if (isValid) {
-            totalPoints += numericAmount;
+            // 미리보기의 "총 포인트 사용/변동액"은 사용실적 집계와 같은 방향 기준으로
+            // 계산해야 한다: SPEND는 부호 그대로 더하고(음수 사용=차감), RECHARGE/
+            // REFUND/BUDGET_ALLOCATION은 유형이 이미 "차감" 방향을 의미하므로 부호와
+            // 무관하게 크기만큼 뺀다. 그냥 numericAmount를 그대로 더하면(부호 보존
+            // 상태에서) 환불 행이 오히려 합계를 늘려버려 총액이 실제와 달라진다.
+            totalPoints += txnType === 'SPEND' ? numericAmount : -Math.abs(numericAmount);
           }
 
           // 조직명 칸을 비워둔 채로, "본사"처럼 특정 개인이 아니라 조직/부서 자체를

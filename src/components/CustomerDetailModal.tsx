@@ -271,11 +271,13 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           </td>
                           <td className="py-2.5 px-4 text-right font-extrabold whitespace-nowrap">
                             {/* 잔액에 미치는 실제 부호로 표기한다. amount 자체에 이미
-                                부호가 있을 수 있어(예: 사용 유형의 음수 사용/정정) 앞에
-                                "+"/"-"를 따로 붙이면 이중 부호("--1,000")가 될 수 있으므로,
-                                실제 증감액을 계산해 formatPoints 하나로만 부호를 표기한다. */}
+                                부호가 있을 수 있어(예: 사용 유형의 음수 사용/정정, 또는
+                                엑셀로 업로드된 환불/충전 행이 원본 부호를 그대로 유지하는
+                                경우) 앞에 "+"/"-"를 따로 붙이면 이중 부호("--1,000")가 될
+                                수 있으므로, 환불/충전은 크기(Math.abs)만 취해 음수로
+                                표기하고, 사용은 원래 부호를 그대로 쓴다. */}
                             <span className={isSpend ? 'text-rose-600' : 'text-emerald-600'}>
-                              {formatPoints(isSpend ? txn.amount : -txn.amount)}
+                              {formatPoints(isSpend ? txn.amount : -Math.abs(txn.amount))}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-center">

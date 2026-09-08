@@ -99,7 +99,9 @@ export const BudgetDashboardView: React.FC<BudgetDashboardViewProps> = ({
       if (t.type === 'SPEND') {
         usedAsOfMap[t.customerId] = (usedAsOfMap[t.customerId] || 0) + t.amount;
       } else if (t.type === 'RECHARGE' || t.type === 'REFUND') {
-        usedAsOfMap[t.customerId] = Math.max((usedAsOfMap[t.customerId] || 0) - t.amount, 0);
+        // 유형 자체가 "차감" 방향이므로 amount의 부호와 무관하게 크기만 뺀다 —
+        // 엑셀에서 환불 행을 음수로 적어온 경우도 방향이 이중으로 뒤집히지 않도록.
+        usedAsOfMap[t.customerId] = Math.max((usedAsOfMap[t.customerId] || 0) - Math.abs(t.amount), 0);
       }
     });
 
